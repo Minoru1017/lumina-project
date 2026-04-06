@@ -1,0 +1,3471 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lumina 微光｜快速互動原型</title>
+  <style>
+    :root{
+      --bg1:#8ea7d8;
+      --bg2:#d8c6ea;
+      --bg3:#f05d34;
+      --glass: rgba(255,255,255,.18);
+      --glass-strong: rgba(255,255,255,.26);
+      --stroke: rgba(255,255,255,.22);
+      --text:#39393a;
+      --muted: rgba(40, 40, 40, 0.72);
+      --dark:#1f2940;
+      --accent:#ffefcb;
+      --accent2:#ffd780;
+      --success:#9ff0b2;
+      --danger:#ffb1bf;
+      --shadow: 0 20px 60px rgba(19, 28, 53, .22);
+      --radius-xl: 28px;
+      --radius-lg: 22px;
+      --radius-md: 18px;
+      --blur: blur(20px);
+    }
+
+    * { box-sizing: border-box; }
+    html {
+      min-height: 100%;
+      min-height: 100dvh;
+      /* 與多數行動瀏覽器預設一致；不額外壓縮文字，避免與系統「大字體」打架 */
+      text-size-adjust: 100%;
+      -webkit-text-size-adjust: 100%;
+    }
+    html, body {
+      margin: 0;
+      padding: 0;
+      font-family: "SF Pro Display", "PingFang TC", "Noto Sans TC", system-ui, -apple-system, sans-serif;
+      color: var(--text);
+      overflow-x: hidden;
+    }
+    body {
+      min-height: 100%;
+      min-height: 100dvh;
+      background:
+        radial-gradient(circle at 20% 20%, rgba(255,255,255,.28), transparent 24%),
+        radial-gradient(circle at 80% 15%, rgba(255,230,180,.25), transparent 20%),
+        radial-gradient(circle at 70% 80%, rgba(174,226,255,.22), transparent 25%),
+        linear-gradient(135deg, var(--bg1), var(--bg2) 48%, var(--bg3));
+      background-attachment: fixed;
+      transition: background-color 600ms ease, background-image 600ms ease;
+    }
+
+    body.theme-morning {
+      --bg1:#d88748;
+      --bg2:#719593;
+      --bg3:#e2f1b2;
+    }
+    body.theme-night {
+      --bg1:#2b3556;
+      --bg2:#5f4a76;
+      --bg3:#d08a5a;
+    }
+    body.theme-calm {
+      --bg1:#83b0ca;
+      --bg2:#b9d8d0;
+      --bg3:#ebf3dc;
+    }
+
+    .ambient-glow{
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: .55;
+      filter: blur(60px);
+      z-index: 0;
+    }
+    .ambient-glow::before,
+    .ambient-glow::after{
+      content:"";
+      position:absolute;
+      border-radius:50%;
+      background: radial-gradient(circle, rgba(255,255,255,.6), transparent 70%);
+      width: 32vw;
+      height: 32vw;
+      animation: floatGlow 9s ease-in-out infinite alternate;
+    }
+    .ambient-glow::before{ top: 8%; left: -5%; }
+    .ambient-glow::after{ bottom: 5%; right: -6%; animation-delay: -3s; }
+
+    @keyframes floatGlow{
+      from{ transform: translateY(0px) translateX(0px) scale(1); }
+      to{ transform: translateY(18px) translateX(14px) scale(1.08); }
+    }
+
+    .app {
+      position: relative;
+      z-index: 1;
+      max-width: 1280px;
+      margin: 0 auto;
+      --app-pad-x: 18px;
+      padding: 26px max(var(--app-pad-x), env(safe-area-inset-right, 0px)) max(132px, calc(104px + env(safe-area-inset-bottom, 0px))) max(var(--app-pad-x), env(safe-area-inset-left, 0px));
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 18px;
+      flex-wrap: wrap;
+      row-gap: 12px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo {
+      width: 44px;
+      height: 44px;
+      border-radius: 16px;
+      background:
+        radial-gradient(circle at 30% 30%, rgba(255,255,255,.95), rgba(255,255,255,.25) 35%, transparent 36%),
+        linear-gradient(145deg, rgba(255,255,255,.35), rgba(255,255,255,.08));
+      backdrop-filter: var(--blur);
+      border: 1px solid rgba(255,255,255,.28);
+      box-shadow: var(--shadow);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .logo::after{
+      content:"✦";
+      position:absolute;
+      inset:0;
+      display:grid;
+      place-items:center;
+      font-size: 20px;
+      color:#fff8d5;
+      text-shadow: 0 0 14px rgba(255,240,180,.65);
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: 1.15rem;
+      font-weight: 800;
+      letter-spacing: .02em;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+
+    .brand p {
+      margin: 2px 0 0;
+      color: var(--muted);
+      font-size: .9rem;
+    }
+
+    .glass {
+      background: linear-gradient(180deg, rgba(255,255,255,.24), rgba(255,255,255,.13));
+      border: 1px solid var(--stroke);
+      box-shadow: var(--shadow);
+      backdrop-filter: var(--blur);
+      -webkit-backdrop-filter: var(--blur);
+    }
+
+    .theme-switcher {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .chip {
+      border: 1px solid rgba(255,255,255,.22);
+      background: rgba(255,255,255,.12);
+      color: white;
+      border-radius: 999px;
+      padding: 10px 14px;
+      cursor: pointer;
+      font-size: .88rem;
+      transition: transform .18s ease, background .25s ease, border-color .25s ease;
+      user-select: none;
+    }
+    .chip:hover { transform: translateY(-1px); background: rgba(255,255,255,.18); }
+    .chip.active { background: rgba(255,255,255,.26); border-color: rgba(255,255,255,.38); }
+
+    .hero {
+      display: grid;
+      grid-template-columns: 1.2fr .8fr;
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+
+    .hero-card {
+      border-radius: var(--radius-xl);
+      padding: 26px;
+      min-height: 240px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-card h2{
+      font-size: clamp(1.6rem, 2.6vw, 2.6rem);
+      margin: 0 0 10px;
+      line-height: 1.05;
+    }
+
+    .hero-card p{
+      margin: 0;
+      max-width: 620px;
+      color: rgba(57, 57, 57, 0.83);
+      line-height: 1.65;
+    }
+
+    .hero-meta{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-top:18px;
+    }
+
+    .pill{
+      padding:10px 14px;
+      border-radius:999px;
+      background: rgba(255,255,255,.14);
+      border:1px solid rgba(255,255,255,.18);
+      color:#fff;
+      font-size:.88rem;
+    }
+
+    .pet-stage {
+      border-radius: var(--radius-xl);
+      padding: 20px;
+      position: relative;
+      min-height: 240px;
+      overflow: hidden;
+    }
+
+    .room {
+      position: relative;
+      border-radius: 26px;
+      min-height: 200px;
+      background:
+        radial-gradient(circle at 50% 15%, rgba(255,250,220,.5), transparent 30%),
+        linear-gradient(180deg, rgba(255,255,255,.22), rgba(255,255,255,.1));
+      border: 1px solid rgba(255,255,255,.22);
+      overflow: hidden;
+      display:flex;
+      align-items:flex-end;
+      justify-content:center;
+      padding-bottom:26px;
+    }
+
+    .sun-window{
+      position:absolute;
+      top:18px;
+      right:18px;
+      width:72px;
+      height:72px;
+      border-radius:22px;
+      background: rgba(255,255,255,.16);
+      border:1px solid rgba(255,255,255,.22);
+      box-shadow: inset 0 0 26px rgba(255,245,180,.22);
+      display:none;
+    }
+    .sun-window::before{
+      content:"";
+      position:absolute;
+      top:18px;
+      left:18px;
+      width:22px;
+      height:22px;
+      border-radius:50%;
+      background: #ffe18c;
+      box-shadow: 0 0 16px rgba(255,225,140,.7);
+    }
+
+    .plant{
+      position:absolute;
+      bottom:10px;
+      left:18px;
+      width:18px;
+      height:58px;
+      display:none;
+    }
+    .plant::before{
+      content:"";
+      position:absolute;
+      bottom:0; left:6px;
+      width:6px; height:40px;
+      background: linear-gradient(180deg,#7ee08a,#529f60);
+      border-radius: 999px;
+    }
+    .plant::after{
+      content:"";
+      position:absolute;
+      top:8px; left:-2px;
+      width:24px; height:18px;
+      background:#91ec9c;
+      border-radius: 50% 50% 50% 0;
+      transform: rotate(-25deg);
+      box-shadow: 12px 10px 0 0 #7cd989;
+    }
+
+    .pet {
+      width: 108px;
+      height: 108px;
+      border-radius: 44% 44% 42% 42% / 48% 48% 38% 38%;
+      position: relative;
+      background:
+        radial-gradient(circle at 35% 28%, rgba(255,255,255,.9), rgba(255,255,255,.15) 25%, transparent 27%),
+        linear-gradient(180deg, #d8dbe6, #a8b4c9);
+      box-shadow: 0 16px 40px rgba(40,54,82,.28);
+      transform-origin:center;
+      animation: petIdle 3.5s ease-in-out infinite;
+    }
+
+    .pet.happy{
+      background:
+        radial-gradient(circle at 35% 28%, rgba(255,255,255,.95), rgba(255,255,255,.18) 25%, transparent 27%),
+        linear-gradient(180deg, #fff0b9, #ffcc8f);
+    }
+
+    .pet::before, .pet::after{
+      content:"";
+      position:absolute;
+      top:36px;
+      width:10px;
+      height:14px;
+      background:#364055;
+      border-radius:999px;
+    }
+    .pet::before{ left:32px; }
+    .pet::after{ right:32px; }
+
+    .mouth{
+      position:absolute;
+      left:50%;
+      top:62px;
+      width:26px;
+      height:12px;
+      transform:translateX(-50%);
+      border-bottom: 3px solid #364055;
+      border-radius:0 0 40px 40px;
+    }
+
+    .pet-sad .mouth{
+      border-bottom:none;
+      border-top:3px solid #364055;
+      border-radius:40px 40px 0 0;
+      top:68px;
+    }
+
+    .pet-hat{
+      display:none;
+      position:absolute;
+      top:-10px;
+      left:50%;
+      transform:translateX(-50%) rotate(-8deg);
+      width:66px;
+      height:18px;
+      background:#2e3752;
+      border-radius:8px;
+    }
+    .pet-hat::before{
+      content:"";
+      position:absolute;
+      left:18px;
+      top:-18px;
+      width:30px;
+      height:20px;
+      background:#38415f;
+      clip-path: polygon(50% 0%, 100% 100%, 0% 100%);
+    }
+    .pet-hat::after{
+      content:"";
+      position:absolute;
+      right:10px; top:2px;
+      width:2px; height:24px;
+      background:#ffdd8f;
+      box-shadow: 0 18px 0 0 #ffdd8f;
+    }
+
+    @keyframes petIdle{
+      0%,100%{ transform: translateY(0) rotate(0deg); }
+      50%{ transform: translateY(-6px) rotate(1deg); }
+    }
+
+    .pet-status{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      margin-top:14px;
+      gap:12px;
+    }
+
+    .stat-box{
+      flex:1;
+      padding:14px 16px;
+      border-radius:18px;
+      background: rgba(255,255,255,.12);
+      border:1px solid rgba(255,255,255,.16);
+    }
+    .stat-box b{ display:block; font-size:1rem; }
+    .stat-box span{ color:var(--muted); font-size:.85rem; }
+
+    .content {
+      display: grid;
+      grid-template-columns: 1.08fr .92fr;
+      gap: 18px;
+      align-items: start;
+      min-width: 0;
+    }
+
+    .column {
+      display: grid;
+      gap: 18px;
+      min-width: 0;
+    }
+
+    .card {
+      border-radius: var(--radius-xl);
+      padding: 18px;
+      position: relative;
+      overflow: hidden;
+      min-width: 0;
+    }
+
+    .section-title{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      margin-bottom:14px;
+      gap:10px;
+      flex-wrap: wrap;
+      row-gap: 6px;
+      min-width: 0;
+    }
+    .section-title h3{
+      margin:0;
+      font-size:1.03rem;
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+    .section-title small{
+      color: var(--muted);
+      white-space: normal;
+      text-align: end;
+      max-width: 100%;
+      line-height: 1.35;
+    }
+
+    .feed-list{
+      display:grid;
+      gap:14px;
+      min-width: 0;
+    }
+
+    .post{
+      padding:16px;
+      border-radius:22px;
+      background: rgba(255,255,255,.1);
+      border:1px solid rgba(255,255,255,.15);
+      position:relative;
+      min-width: 0;
+      max-width: 100%;
+      box-sizing: border-box;
+      overflow-x: hidden;
+      overflow-wrap: anywhere;
+    }
+
+    .post-head{
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      gap:12px;
+      margin-bottom:10px;
+      min-width: 0;
+    }
+
+    .avatar-tag{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      min-width: 0;
+      flex: 1;
+    }
+    .avatar-tag > div:last-child {
+      min-width: 0;
+    }
+
+    .anon-avatar{
+      width:42px;
+      height:42px;
+      border-radius:16px;
+      background: linear-gradient(145deg, rgba(255,255,255,.5), rgba(255,255,255,.12));
+      border:1px solid rgba(255,255,255,.22);
+      display:grid;
+      place-items:center;
+      font-size:1rem;
+    }
+
+    .post-tags{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      margin-top:4px;
+    }
+
+    .mini-tag{
+      padding:6px 10px;
+      border-radius:999px;
+      background: rgba(255,255,255,.13);
+      color: rgba(42, 42, 42, 0.92);
+      font-size:.78rem;
+      border:1px solid rgba(255,255,255,.14);
+    }
+
+    .post p{
+      margin:0 0 14px;
+      color: rgba(39, 39, 39, 0.92);
+      line-height:1.65;
+      font-size:.95rem;
+      white-space: pre-line;
+      max-width: 100%;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+
+    .post-actions{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+
+    .pat-btn, .soft-btn, .task-btn{
+      border:none;
+      cursor:pointer;
+      color:rgb(223, 223, 223);
+      border-radius:999px;
+      padding:10px 14px;
+      font-weight:650;
+      transition: transform .16s ease, opacity .2s ease, background .25s ease;
+    }
+    .pat-btn:hover, .soft-btn:hover, .task-btn:hover { transform: translateY(-1px); }
+
+    /* 與 .post-encourage-btn 共用（由 JS 加上 .btn-surface-pat-like） */
+    .btn-surface-pat-like {
+      min-width: 110px;
+      background: linear-gradient(135deg, rgba(255,255,255,.22), rgba(255,255,255,.12));
+      border: 1px solid rgba(255,255,255,.18) !important;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .soft-btn{
+      background: rgba(255,255,255,.12);
+      border:1px solid rgba(255,255,255,.16);
+    }
+
+    .resource-card{
+      background:
+        radial-gradient(circle at 90% 10%, rgba(255,232,180,.26), transparent 18%),
+        linear-gradient(180deg, rgba(255,255,255,.22), rgba(255,255,255,.11));
+    }
+
+    .resource-banner{
+      display:flex;
+      gap:12px;
+      align-items:flex-start;
+      margin-bottom:14px;
+    }
+
+    .resource-icon{
+      width:46px; height:46px;
+      border-radius:16px;
+      display:grid; place-items:center;
+      background: rgba(255,255,255,.18);
+      border:1px solid rgba(255,255,255,.2);
+      font-size:1.2rem;
+      flex:0 0 auto;
+    }
+
+    .resource-grid{
+      display:grid;
+      grid-template-columns:repeat(2,1fr);
+      gap:12px;
+    }
+
+    .resource-item{
+      padding:14px;
+      border-radius:18px;
+      background: rgba(255,255,255,.1);
+      border:1px solid rgba(255,255,255,.14);
+    }
+    .resource-item b{ display:block; margin-bottom:6px; }
+    .resource-item p{
+      margin:0 0 12px;
+      color: var(--muted);
+      font-size:.9rem;
+      line-height:1.55;
+    }
+
+    .task-list{
+      display:grid;
+      gap:12px;
+    }
+
+    .task{
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      gap:12px;
+      padding:14px;
+      border-radius:20px;
+      background: rgba(255,255,255,.1);
+      border:1px solid rgba(255,255,255,.14);
+      flex-wrap: wrap;
+      min-width: 0;
+    }
+
+    .task-meta {
+      flex: 1 1 12rem;
+      min-width: 0;
+    }
+    .task-meta b{
+      display:block;
+      margin-bottom:4px;
+      overflow-wrap: anywhere;
+    }
+    .task-meta span{
+      color: var(--muted);
+      font-size:.9rem;
+    }
+
+    .task-btn{
+      background: linear-gradient(135deg, rgba(255,255,255,.24), rgba(255,255,255,.12));
+      border:1px solid rgba(255,255,255,.18);
+      white-space: normal;
+      text-align: center;
+      flex-shrink: 0;
+      align-self: center;
+      max-width: 100%;
+    }
+    .task.done{
+      opacity:.68;
+    }
+    .task.done .task-btn{
+      background: rgba(159,240,178,.24);
+      border-color: rgba(159,240,178,.42);
+      cursor: default;
+    }
+
+    .stats-panel{
+      display:grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 9.5rem), 1fr));
+      gap:12px;
+    }
+
+    .metric{
+      padding:16px;
+      border-radius:20px;
+      text-align:center;
+      background: rgba(255,255,255,.1);
+      border:1px solid rgba(255,255,255,.14);
+    }
+    .metric strong{
+      display:block;
+      font-size:1.3rem;
+      margin-bottom:4px;
+    }
+    .metric span{
+      color:var(--muted);
+      font-size:.85rem;
+    }
+
+    .floating-bar{
+      position: fixed;
+      left: 50%;
+      bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+      transform: translateX(-50%);
+      width: min(92vw, 760px);
+      max-width: 100%;
+      z-index: 10;
+      border-radius: 999px;
+      padding: 10px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      flex-wrap: wrap;
+      min-width: 0;
+      box-shadow:
+        0 10px 36px rgba(15,23,44,.18),
+        0 1px 0 rgba(255,255,255,.12) inset;
+    }
+
+    .floating-left{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+
+    .nav-btn{
+      border:none;
+      color:white;
+      background: transparent;
+      padding: 12px 16px;
+      border-radius: 999px;
+      cursor:pointer;
+      font-weight:650;
+      transition: background .24s ease, transform .16s ease;
+    }
+    .nav-btn:hover{ transform: translateY(-1px); }
+    .nav-btn.active{ background: rgba(255,255,255,.18); }
+
+    .context-pill{
+      padding: 12px 16px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.18);
+      border:1px solid rgba(255,255,255,.18);
+      color:rgb(255, 255, 255);
+      font-size:.92rem;
+      white-space: normal;
+      text-align: center;
+      line-height: 1.4;
+      max-width: 100%;
+      flex: 1 1 auto;
+      min-width: 0;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+
+    .toast{
+      position: fixed;
+      top: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-20px);
+      background: rgba(20,27,44,.75);
+      color:rgb(255, 255, 255);
+      padding: 12px 16px;
+      border-radius: 999px;
+      border:1px solid rgba(255,255,255,.16);
+      backdrop-filter: blur(16px);
+      opacity:0;
+      pointer-events:none;
+      transition: all .3s ease;
+      z-index: 30;
+      box-shadow: var(--shadow);
+      max-width: min(92vw, 26em);
+      white-space: normal;
+      text-align: center;
+      line-height: 1.45;
+      overflow-wrap: anywhere;
+    }
+    .toast.show{
+      opacity:1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .celebrate{
+      position: fixed;
+      inset: 0;
+      pointer-events:none;
+      z-index: 15;
+      opacity:0;
+    }
+    .celebrate.active{
+      animation: flashEdge .9s ease;
+    }
+
+    @keyframes flashEdge{
+      0%{
+        opacity:0;
+        box-shadow: inset 0 0 0 rgba(255,255,255,0);
+      }
+      28%{
+        opacity:1;
+        box-shadow:
+          inset 0 0 80px rgba(255,241,181,.16),
+          inset 0 0 140px rgba(154,212,255,.14),
+          inset 0 0 0 2px rgba(255,255,255,.18);
+      }
+      100%{
+        opacity:0;
+        box-shadow:
+          inset 0 0 0 rgba(255,255,255,0);
+      }
+    }
+
+    .orb{
+      position:absolute;
+      width:10px; height:10px;
+      border-radius:50%;
+      background: radial-gradient(circle, #fff, #ffe6a6 60%, rgba(255,255,255,0));
+      pointer-events:none;
+      animation: rise 900ms ease forwards;
+      filter: blur(.2px);
+    }
+    @keyframes rise{
+      0%{ opacity:0; transform: translateY(6px) scale(.7); }
+      15%{ opacity:1; }
+      100%{ opacity:0; transform: translateY(-34px) translateX(var(--drift, 0px)) scale(1.7); }
+    }
+
+    .footer-note{
+      margin-top: 10px;
+      color: rgba(71, 71, 71, 0.72);
+      font-size: .85rem;
+      text-align: center;
+    }
+
+    @media (max-width: 980px){
+      .hero, .content{
+        grid-template-columns: 1fr;
+      }
+      .resource-grid{
+        grid-template-columns:1fr;
+      }
+    }
+
+    @media (max-width: 720px){
+      .topbar{
+        flex-direction:column;
+        align-items:flex-start;
+      }
+      .theme-switcher{
+        justify-content:flex-start;
+      }
+      .stats-panel{
+        grid-template-columns:1fr;
+      }
+      .app{
+        padding-bottom: max(180px, calc(148px + env(safe-area-inset-bottom, 0px)));
+      }
+      .floating-bar{
+        width: calc(100vw - max(var(--app-pad-x), env(safe-area-inset-left, 0px)) - max(var(--app-pad-x), env(safe-area-inset-right, 0px)));
+        border-radius: 28px;
+        padding: 10px;
+        bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .pet-interact-container {
+        max-width: none;
+        width: 100%;
+      }
+      .pet-interact-page > .pet-page-companion-card {
+        max-width: none;
+      }
+      .community-page {
+        max-width: none;
+      }
+      .ios-dashboard {
+        padding: 24px 18px 18px;
+      }
+      .floating-left{
+        justify-content:space-between;
+      }
+      .context-pill{
+        text-align:center;
+      }
+    }
+    /* =========================
+   Onboarding / Login / Hatch
+========================= */
+.onboarding{
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(255,255,255,.16), transparent 20%),
+    radial-gradient(circle at 80% 15%, rgba(255,224,170,.18), transparent 18%),
+    linear-gradient(135deg, rgba(20,30,50,.34), rgba(40,30,55,.28));
+  backdrop-filter: blur(10px);
+}
+
+.onboarding.active{
+  display: flex;
+}
+
+.onboarding-shell{
+  width: min(920px, 100%);
+  min-height: 640px;
+  border-radius: 34px;
+  padding: 28px;
+  position: relative;
+  overflow: hidden;
+}
+
+.onboard-step{
+  display: none;
+  min-height: 580px;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.onboard-step.active{
+  display: flex;
+}
+
+.onboard-brand{
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.onboard-logo{
+  width: 58px;
+  height: 58px;
+  border-radius: 20px;
+  display: grid;
+  place-items: center;
+  font-size: 24px;
+  color: #fff6cf;
+  background:
+    radial-gradient(circle at 30% 30%, rgba(255,255,255,.96), rgba(255,255,255,.2) 35%, transparent 36%),
+    linear-gradient(145deg, rgba(255,255,255,.35), rgba(255,255,255,.08));
+  border: 1px solid rgba(255,255,255,.24);
+  box-shadow: var(--shadow);
+}
+
+.onboard-brand h2,
+.onboard-hero h1,
+.onboard-header h3,
+.egg-info h4,
+#birthPetName{
+  margin: 0;
+  color: var(--title-color);
+}
+
+.onboard-brand p,
+.onboard-hero p,
+.onboard-header p,
+.egg-info p,
+#birthPetTrait,
+.input-tip,
+.selected-result{
+  color: var(--text-secondary);
+}
+
+.onboard-hero{
+  padding: 18px 0 8px;
+}
+
+.onboard-hero h1{
+  font-size: clamp(2rem, 4vw, 3.4rem);
+  line-height: 1.08;
+  margin-bottom: 14px;
+}
+
+.onboard-hero p{
+  max-width: 650px;
+  line-height: 1.8;
+  font-size: 1.02rem;
+}
+
+.onboard-header.center,
+.onboard-actions.center{
+  text-align: center;
+  justify-content: center;
+}
+
+.onboard-header h3{
+  font-size: 1.4rem;
+  margin-bottom: 6px;
+}
+
+.form-block{
+  display: grid;
+  gap: 10px;
+}
+
+.input-label{
+  color: var(--title-color);
+  font-weight: 700;
+  font-size: .96rem;
+}
+
+.onboard-input{
+  width: 100%;
+  border: 1px solid rgba(255,255,255,.2);
+  background: rgba(255,255,255,.12);
+  color: var(--title-color);
+  border-radius: 18px;
+  padding: 16px 18px;
+  font-size: 1rem;
+  outline: none;
+  transition: .25s ease;
+}
+
+.onboard-input::placeholder{
+  color: var(--text-soft);
+}
+
+.onboard-input:focus{
+  border-color: rgba(255,255,255,.36);
+  background: rgba(255,255,255,.16);
+  box-shadow: 0 0 0 4px rgba(255,255,255,.08);
+}
+
+.status-grid{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.status-choice{
+  border: 1px solid rgba(255,255,255,.18);
+  background: rgba(255,255,255,.11);
+  color: var(--badge-text);
+  padding: 12px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: .2s ease;
+}
+
+.status-choice:hover{
+  transform: translateY(-1px);
+  background: rgba(255,255,255,.16);
+}
+
+.status-choice.active{
+  background: rgba(255,255,255,.28);
+  border-color: rgba(255,255,255,.34);
+}
+
+.quiz-grid{
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+.quiz-card{
+  border: 1px solid rgba(255,255,255,.18);
+  background: rgba(255,255,255,.11);
+  border-radius: 24px;
+  padding: 18px;
+  text-align: left;
+  cursor: pointer;
+  transition: .22s ease;
+  color: inherit;
+}
+
+.quiz-card:hover{
+  transform: translateY(-2px);
+  background: rgba(255,255,255,.16);
+}
+
+.quiz-card.active{
+  background: rgba(255,255,255,.26);
+  border-color: rgba(255,255,255,.34);
+  box-shadow: 0 10px 30px rgba(20,30,60,.14);
+}
+
+.quiz-icon{
+  width: 44px;
+  height: 44px;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  font-size: 1.2rem;
+  margin-bottom: 12px;
+  background: rgba(255,255,255,.16);
+  border: 1px solid rgba(255,255,255,.18);
+  color: var(--title-color);
+}
+
+.quiz-card strong{
+  display: block;
+  line-height: 1.55;
+  margin-bottom: 8px;
+  color: var(--title-color);
+}
+
+.quiz-card small{
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.selected-result{
+  min-height: 24px;
+  font-size: .94rem;
+}
+
+.onboard-actions{
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: auto;
+}
+
+.onboard-actions.split{
+  justify-content: space-between;
+}
+
+.onboard-primary,
+.onboard-secondary{
+  border: none;
+  border-radius: 999px;
+  padding: 14px 18px;
+  font-size: .95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: .2s ease;
+}
+
+.onboard-primary{
+  background: linear-gradient(135deg, rgba(255,255,255,.28), rgba(255,255,255,.14));
+  border: 1px solid rgba(255,255,255,.24);
+  color: var(--button-text);
+}
+
+.onboard-secondary{
+  background: rgba(255,255,255,.1);
+  border: 1px solid rgba(255,255,255,.14);
+  color: var(--button-text);
+}
+
+.onboard-primary:hover,
+.onboard-secondary:hover{
+  transform: translateY(-1px);
+}
+
+.onboard-primary:disabled{
+  opacity: .45;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.egg-stage{
+  display: grid;
+  place-items: center;
+  gap: 18px;
+  padding: 24px 0;
+}
+
+.egg{
+  width: 150px;
+  height: 190px;
+  border-radius: 50% 50% 48% 48% / 58% 58% 42% 42%;
+  background:
+    radial-gradient(circle at 35% 28%, rgba(255,255,255,.95), rgba(255,255,255,.25) 25%, transparent 26%),
+    linear-gradient(180deg, #d6dce7, #9aa8c5);
+  box-shadow: 0 18px 50px rgba(26,34,58,.22);
+  position: relative;
+  transition: .4s ease;
+}
+
+.egg.amber{
+  background:
+    radial-gradient(circle at 35% 28%, rgba(255,255,255,.95), rgba(255,255,255,.25) 25%, transparent 26%),
+    linear-gradient(180deg, #ffe5b0, #e9ad6a);
+}
+
+.egg.mint{
+  background:
+    radial-gradient(circle at 35% 28%, rgba(255,255,255,.95), rgba(255,255,255,.25) 25%, transparent 26%),
+    linear-gradient(180deg, #d7fff1, #8dd5bb);
+}
+
+.egg.shake{
+  animation: eggShake .55s ease 3;
+}
+
+@keyframes eggShake{
+  0%,100%{ transform: rotate(0deg) translateY(0); }
+  25%{ transform: rotate(-4deg) translateY(-2px); }
+  50%{ transform: rotate(4deg) translateY(0); }
+  75%{ transform: rotate(-3deg) translateY(-1px); }
+}
+
+.egg.glow{
+  box-shadow:
+    0 0 0 10px rgba(255,255,255,.08),
+    0 0 80px rgba(255,232,168,.35),
+    0 18px 50px rgba(26,34,58,.22);
+}
+
+.egg-info{
+  text-align: center;
+}
+
+.egg-info h4{
+  font-size: 1.25rem;
+  margin-bottom: 6px;
+}
+
+.pet-reveal{
+  display: grid;
+  place-items: center;
+  gap: 12px;
+  padding: 18px 0 12px;
+}
+
+.pet-birth{
+  width: 118px;
+  height: 118px;
+  border-radius: 42% 42% 38% 38% / 48% 48% 34% 34%;
+  background: linear-gradient(180deg, #fff0b9, #ffcc8f);
+  display: grid;
+  place-items: center;
+  font-size: 2rem;
+  color: #364055;
+  box-shadow: 0 18px 50px rgba(30,30,40,.2);
+  animation: petBirthFloat 2.2s ease-in-out infinite;
+}
+
+@keyframes petBirthFloat{
+  0%,100%{ transform: translateY(0); }
+  50%{ transform: translateY(-6px); }
+}
+
+.birth-tags{
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+.glow{
+  box-shadow: 0 0 30px rgba(255,231,164,.18);
+}
+
+.app.app-hidden{
+  filter: blur(8px);
+  pointer-events: none;
+  user-select: none;
+}
+
+@media (max-width: 860px){
+  .quiz-grid{
+    grid-template-columns: 1fr;
+  }
+
+  .onboarding-shell{
+    min-height: auto;
+    padding: 22px;
+  }
+
+  .onboard-step{
+    min-height: auto;
+  }
+}
+
+/* --- 視圖切換核心邏輯 --- */
+/* 避免 blur／長時間動畫與 scrollIntoView 競爭造成卡頓，只動 opacity + transform（GPU 較友善） */
+.view-hidden { display: none !important; }
+.view-active {
+  display: block !important;
+  animation: viewFadeIn 0.32s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+  backface-visibility: hidden;
+}
+
+@keyframes viewFadeIn {
+  from { opacity: 0; transform: translate3d(0, 8px, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+/* 精靈分頁：靠上留白、底部額外淨空（避免被固定導覽遮住） */
+#petInteractView.view-active {
+  margin-top: -6px;
+}
+.pet-interact-page {
+  margin-top: 0;
+  padding-bottom: 8px;
+}
+.pet-interact-page > .pet-page-companion-card {
+  max-width: 600px;
+  margin: 18px auto 0;
+  width: 100%;
+  min-width: 0;
+}
+
+/* 匿名共鳴社群分頁 */
+#communityView.view-active {
+  margin-top: -6px;
+}
+.community-page {
+  display: grid;
+  gap: 18px;
+  padding-bottom: 8px;
+  max-width: 720px;
+  margin: 0 auto;
+  min-width: 0;
+  width: 100%;
+}
+.community-compose-card .community-compose {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+@media (min-width: 520px) {
+  .community-compose-card .community-compose {
+    flex-direction: row;
+    align-items: flex-end;
+  }
+  .community-compose-card .community-textarea {
+    flex: 1;
+    min-width: 0;
+  }
+}
+.community-textarea {
+  width: 100%;
+  min-height: calc(0.95rem * 1.6 + 28px);
+  max-height: 20rem;
+  resize: none;
+  overflow-y: hidden;
+  box-sizing: border-box;
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,.22);
+  background: rgba(255,255,255,.14);
+  color: var(--text);
+  padding: 14px 16px;
+  font: inherit;
+  font-size: .95rem;
+  line-height: 1.6;
+  outline: none;
+  transition: border-color .2s, box-shadow .2s;
+}
+.community-textarea::placeholder {
+  color: rgba(57, 57, 57, 0.45);
+}
+.community-textarea:focus {
+  border-color: rgba(255,255,255,.38);
+  box-shadow: 0 0 0 3px rgba(255,255,255,.12);
+}
+.publish-send-btn {
+  flex-shrink: 0;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,.22);
+  background: linear-gradient(145deg, rgba(255,255,255,.28), rgba(255,255,255,.12));
+  color: #fff;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  box-shadow: var(--shadow);
+  transition: transform .18s ease, background .22s ease;
+}
+.publish-send-btn:hover {
+  transform: translateY(-2px);
+  background: linear-gradient(145deg, rgba(255,255,255,.34), rgba(255,255,255,.16));
+}
+.publish-send-btn:active {
+  transform: scale(0.96);
+}
+.publish-send-btn svg {
+  width: 22px;
+  height: 22px;
+  display: block;
+}
+.post--own {
+  border-color: rgba(255,239,203,.45);
+  background: linear-gradient(135deg, rgba(255,255,255,.16), rgba(255,239,203,.1));
+}
+.post-own-badge {
+  font-size: .82rem;
+  font-weight: 650;
+  color: rgba(57, 57, 57, 0.55);
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(255,255,255,.1);
+}
+/* 與拍拍同表面：加 .btn-surface-pat-like（不可使用 class pat-btn） */
+.post-encourage-btn {
+  cursor: pointer;
+  color: rgb(223, 223, 223);
+  border-radius: 999px;
+  padding: 10px 14px;
+  font-weight: 650;
+  font-size: inherit;
+  font-family: inherit;
+  transition: transform .16s ease, opacity .2s ease, background .25s ease;
+}
+.post-encourage-btn:hover { transform: translateY(-1px); }
+.post-encourage-slot {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  margin-top: 4px;
+}
+.post-encourage-slot[hidden] { display: none !important; }
+.post-encourage-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-end;
+}
+.post-encourage-textarea {
+  flex: 1;
+  min-width: 0;
+  /* 單行：一行字高 + 上下 padding（實際像素由 JS 與 scrollHeight 對齊） */
+  min-height: calc(0.9rem * 1.55 + 24px);
+  max-height: 12rem;
+  resize: none;
+  overflow-y: hidden;
+  box-sizing: border-box;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,.22);
+  background: rgba(255,255,255,.14);
+  color: var(--text);
+  padding: 12px 14px;
+  font: inherit;
+  font-size: .9rem;
+  line-height: 1.55;
+  outline: none;
+}
+.post-encourage-textarea:focus {
+  border-color: rgba(255,255,255,.35);
+  box-shadow: 0 0 0 2px rgba(255,255,255,.1);
+}
+.post-encourage-send {
+  flex-shrink: 0;
+  border: none;
+  cursor: pointer;
+  color: rgb(223, 223, 223);
+  border-radius: 999px;
+  padding: 10px 18px;
+  font-weight: 650;
+  font-family: inherit;
+  background: linear-gradient(135deg, rgba(255,255,255,.24), rgba(255,255,255,.12));
+  border: 1px solid rgba(255,255,255,.2);
+  transition: transform .16s ease, background .22s ease;
+}
+.post-encourage-send:hover { transform: translateY(-1px); }
+.post-replies {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255,255,255,.14);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  max-width: 100%;
+}
+.post-replies:empty {
+  display: none;
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+.post-reply {
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: rgba(255,255,255,.08);
+  border: 1px solid rgba(255,255,255,.12);
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+.post-reply-meta {
+  font-size: .78rem;
+  color: var(--muted);
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+.post-reply-body {
+  margin: 0;
+  font-size: .88rem;
+  line-height: 1.55;
+  color: rgba(39, 39, 39, 0.9);
+  white-space: pre-line;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* --- 精靈互動專屬介面 (iOS 26.1 風格) --- */
+.pet-interact-container {
+  max-width: 600px;
+  margin: 2px auto 0;
+  border-radius: 40px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.pet-room-stage {
+  /* 隨字級／視窗伸縮，避免固定 px 在放大時擠壓上下內容 */
+  height: clamp(15rem, 42vh, 25rem);
+  background: linear-gradient(180deg, rgba(255,255,255,0.1) 0%, transparent 100%);
+  position: relative;
+  display: block;
+  overflow: hidden;
+}
+
+/* --- 精靈圖鑑：橫向滑動 --- */
+.pet-dex-viewport {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  overflow: hidden;
+  touch-action: pan-y;
+}
+.pet-dex-track {
+  display: flex;
+  width: 200%;
+  height: 100%;
+  will-change: transform;
+  transition: transform 0.38s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .pet-dex-track { transition-duration: 0.01ms; }
+}
+.pet-dex-slide {
+  flex: 0 0 50%;
+  height: 100%;
+  position: relative;
+  display: grid;
+  place-items: center;
+  padding: 8px 12px 52px;
+  box-sizing: border-box;
+}
+.pet-dex-slide-scene {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+}
+.pet-dex-swipe-hint {
+  position: absolute;
+  bottom: 52px;
+  left: 50%;
+  transform: translateX(-50%);
+  margin: 0;
+  font-size: 0.72rem;
+  color: rgba(255,255,255,.72);
+  letter-spacing: 0.04em;
+  pointer-events: none;
+  white-space: nowrap;
+  max-width: calc(100% - 24px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pet-dex-dots {
+  position: absolute;
+  bottom: 32px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  z-index: 4;
+}
+.pet-dex-dot {
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255,255,255,.28);
+  cursor: pointer;
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+.pet-dex-dot:hover,
+.pet-dex-dot:focus-visible {
+  background: rgba(255,255,255,.5);
+  outline: none;
+  transform: scale(1.15);
+}
+.pet-dex-dot.active {
+  background: rgba(255,255,255,.92);
+  transform: scale(1.2);
+}
+.pet-dex-slide-lock {
+  position: absolute;
+  inset: 0;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: radial-gradient(circle at 50% 45%, rgba(20,27,44,.35), rgba(20,27,44,.62));
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  border-radius: 20px;
+  pointer-events: none;
+  z-index: 5;
+}
+/* 避免 display:flex 蓋掉 [hidden]，解鎖後蒙版必須完全消失 */
+.pet-dex-slide-lock:not([hidden]) {
+  display: flex;
+}
+.pet-dex-slide-lock[hidden] {
+  display: none !important;
+}
+.pet-dex-lock-icon { font-size: 1.75rem; filter: grayscale(0.2); }
+.pet-dex-lock-text {
+  font-size: 0.82rem;
+  font-weight: 650;
+  color: rgba(255,255,255,.92);
+}
+
+/* 白瑀鳥：白色棉被感、有頭無五官 */
+.pet-baiyu {
+  position: relative;
+  width: 200px;
+  height: 190px;
+  cursor: pointer;
+  z-index: 3;
+  animation: petFloat 4s infinite ease-in-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pet-baiyu { animation: none; }
+}
+.pet-baiyu-shape {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 168px;
+  height: 158px;
+}
+.pet-baiyu-head {
+  position: absolute;
+  left: 50%;
+  top: 6px;
+  transform: translateX(-50%);
+  width: 72px;
+  height: 56px;
+  border-radius: 48% 48% 42% 42%;
+  background:
+    linear-gradient(145deg, rgba(255,255,255,.98), rgba(245,248,255,.88));
+  box-shadow:
+    inset -6px -10px 18px rgba(200,210,230,.35),
+    inset 4px 6px 14px rgba(255,255,255,.75),
+    0 14px 28px rgba(40,54,82,.18);
+  /* 刻意無眼鼻口 */
+}
+.pet-baiyu-body-quilt {
+  position: absolute;
+  left: 50%;
+  top: 48px;
+  transform: translateX(-50%);
+  width: 148px;
+  height: 108px;
+  border-radius: 38% 38% 46% 46%;
+  background:
+    repeating-linear-gradient(
+      92deg,
+      rgba(255,255,255,.97) 0px,
+      rgba(255,255,255,.97) 5px,
+      rgba(248,250,255,.88) 5px,
+      rgba(248,250,255,.88) 10px
+    ),
+    linear-gradient(168deg, rgba(255,255,255,.95), rgba(232,238,248,.9));
+  box-shadow:
+    inset 0 -16px 28px rgba(190,200,220,.28),
+    inset 8px 4px 20px rgba(255,255,255,.65),
+    0 22px 36px rgba(40,54,82,.16);
+}
+.pet-baiyu-fold-a {
+  position: absolute;
+  left: 26px;
+  top: 72px;
+  width: 44px;
+  height: 64px;
+  border-radius: 12px 8px 60% 20px;
+  background: linear-gradient(120deg, rgba(255,255,255,.55), rgba(255,255,255,.08));
+  transform: rotate(-8deg);
+  pointer-events: none;
+}
+.pet-baiyu-wing-l,
+.pet-baiyu-wing-r {
+  position: absolute;
+  top: 78px;
+  width: 38px;
+  height: 72px;
+  border-radius: 50% 40% 55% 45%;
+  background: linear-gradient(180deg, rgba(255,255,255,.92), rgba(238,242,252,.75));
+  box-shadow: inset -4px 0 12px rgba(200,210,230,.25);
+  pointer-events: none;
+}
+.pet-baiyu-wing-l { left: 4px; transform: rotate(-18deg); }
+.pet-baiyu-wing-r { right: 4px; transform: rotate(18deg); }
+
+.pet-baiyu-notes {
+  position: absolute;
+  left: 50%;
+  top: -6px;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 14px;
+  pointer-events: none;
+}
+.pet-baiyu-notes span {
+  font-size: 1.1rem;
+  color: rgba(255,255,255,.88);
+  text-shadow: 0 2px 8px rgba(40,54,82,.25);
+  opacity: 0;
+  transform: translateY(8px);
+}
+.pet-baiyu.singing .pet-baiyu-notes span:nth-child(1) { animation: baiyuNote 0.85s ease-out forwards; }
+.pet-baiyu.singing .pet-baiyu-notes span:nth-child(2) { animation: baiyuNote 0.85s ease-out 0.12s forwards; }
+.pet-baiyu.singing .pet-baiyu-notes span:nth-child(3) { animation: baiyuNote 0.85s ease-out 0.24s forwards; }
+
+.pet-baiyu.dancing .pet-baiyu-shape {
+  animation: baiyuWiggle 0.38s ease-in-out 4 alternate;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pet-baiyu.dancing .pet-baiyu-shape { animation: none; }
+  .pet-baiyu.singing .pet-baiyu-notes span { animation: none; opacity: 0.9; transform: translateY(0); }
+}
+
+.pet-baiyu-locked {
+  filter: saturate(0.65) brightness(0.88);
+  cursor: default;
+}
+
+/* 白瑀鳥陪伴場景：鳥媽媽溫暖懷抱（純 CSS，置於精靈後層） */
+.pet-dex-slide-scene--baiyu {
+  isolation: isolate;
+}
+.baiyu-hug-scene {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  display: grid;
+  place-items: center;
+}
+.baiyu-mom-glow {
+  position: absolute;
+  width: min(92%, 280px);
+  height: min(78%, 240px);
+  left: 50%;
+  top: 52%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse 100% 85% at 50% 58%,
+    rgba(255, 224, 200, 0.42) 0%,
+    rgba(255, 190, 165, 0.18) 42%,
+    transparent 68%
+  );
+  filter: blur(10px);
+  animation: baiyuHugPulse 5.5s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .baiyu-mom-glow { animation: none; }
+}
+@keyframes baiyuHugPulse {
+  0%, 100% { opacity: 0.88; transform: translate(-50%, -50%) scale(1); }
+  50% { opacity: 1; transform: translate(-50%, -50%) scale(1.035); }
+}
+.baiyu-mom-body {
+  position: absolute;
+  width: min(72%, 210px);
+  height: min(68%, 195px);
+  left: 50%;
+  top: 54%;
+  transform: translate(-50%, -50%);
+  border-radius: 46% 46% 40% 40%;
+  background:
+    linear-gradient(168deg, rgba(255, 236, 220, 0.52) 0%, rgba(255, 205, 180, 0.36) 55%, rgba(245, 185, 160, 0.22) 100%);
+  box-shadow:
+    inset 0 -18px 36px rgba(180, 100, 70, 0.06),
+    inset 8px 10px 24px rgba(255, 255, 255, 0.2);
+}
+.baiyu-mom-head {
+  position: absolute;
+  width: 88px;
+  height: 72px;
+  left: 50%;
+  top: 22%;
+  transform: translateX(-50%);
+  border-radius: 50% 50% 45% 45%;
+  background: linear-gradient(155deg, rgba(255, 232, 214, 0.55), rgba(255, 198, 172, 0.32));
+  box-shadow: inset -6px -8px 16px rgba(200, 120, 90, 0.08);
+}
+/* 媽媽的翅膀自兩側輕輕環住小白瑀鳥 */
+.baiyu-mom-wing {
+  position: absolute;
+  top: 46%;
+  width: 100px;
+  height: 148px;
+  border-radius: 58% 38% 52% 48%;
+  transform: translateY(-50%);
+}
+.baiyu-mom-wing--l {
+  left: 50%;
+  margin-left: -118px;
+  background: linear-gradient(
+    125deg,
+    rgba(255, 220, 198, 0.48) 0%,
+    rgba(255, 188, 158, 0.28) 100%
+  );
+  box-shadow: inset 6px 0 22px rgba(255, 255, 255, 0.12);
+  transform: translateY(-50%) rotate(-32deg);
+}
+.baiyu-mom-wing--r {
+  left: 50%;
+  margin-left: 18px;
+  background: linear-gradient(
+    235deg,
+    rgba(255, 220, 198, 0.48) 0%,
+    rgba(255, 188, 158, 0.28) 100%
+  );
+  box-shadow: inset -6px 0 22px rgba(255, 255, 255, 0.12);
+  transform: translateY(-50%) rotate(32deg);
+}
+
+@keyframes baiyuWiggle {
+  0% { transform: translate(-50%, -50%) rotate(-6deg) scale(1); }
+  100% { transform: translate(-50%, -50%) rotate(6deg) scale(1.04); }
+}
+@keyframes baiyuNote {
+  0% { opacity: 0; transform: translateY(12px) scale(0.6); }
+  40% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-36px) scale(1.05); }
+}
+
+/* 佈景系統圖層 */
+.room-layer-window {
+  position: absolute;
+  top: 40px; right: 40px;
+  width: 100px; height: 120px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 20px;
+  box-shadow: inset 0 0 30px rgba(255,255,255,0.2);
+}
+
+.room-layer-glow {
+  position: absolute;
+  left: 50%;
+  top: 42%;
+  transform: translate(-50%, -50%);
+  width: 300px; height: 300px;
+  background: radial-gradient(circle, rgba(255,239,203,0.2) 0%, transparent 70%);
+  filter: blur(40px);
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* 互動精靈本體（與首頁 #pet 的開心／難過色與嘴型對齊） */
+.pet-interact-body {
+  width: 160px; height: 160px;
+  border-radius: 45%;
+  position: relative;
+  cursor: pointer;
+  transition: background 0.35s ease, box-shadow 0.35s ease, transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  animation: petFloat 4s infinite ease-in-out;
+}
+.pet-interact-body.pet-mood-happy {
+  background:
+    radial-gradient(circle at 35% 28%, rgba(255,255,255,.95), rgba(255,255,255,.18) 25%, transparent 27%),
+    linear-gradient(180deg, #fff0b9, #ffcc8f);
+  box-shadow: 0 30px 60px rgba(0,0,0,0.12);
+}
+.pet-interact-body.pet-mood-sad {
+  background:
+    radial-gradient(circle at 35% 28%, rgba(255,255,255,.9), rgba(255,255,255,.15) 25%, transparent 27%),
+    linear-gradient(180deg, #d8dbe6, #a8b4c9);
+  box-shadow: 0 30px 60px rgba(40,54,82,.22);
+}
+.pet-interact-body:active { transform: scale(0.92); }
+
+@keyframes petFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+
+.pet-interact-eye {
+  position: absolute; top: 60px;
+  width: 14px; height: 20px;
+  background: #364055; border-radius: 50%;
+  transition: all 0.2s ease;
+}
+.pet-interact-eye.left { left: 45px; }
+.pet-interact-eye.right { right: 45px; }
+
+.pet-interact-mouth {
+  position: absolute; top: 100px; left: 50%;
+  transform: translateX(-50%);
+  width: 30px; height: 15px;
+  border-bottom: 4px solid #364055;
+  border-radius: 0 0 20px 20px;
+  transition: 0.3s;
+}
+.pet-interact-body.pet-mood-sad .pet-interact-mouth {
+  border-bottom: none;
+  border-top: 4px solid #364055;
+  border-radius: 40px 40px 0 0;
+  top: 108px;
+}
+
+.pet-interact-blush {
+  position: absolute; top: 90px; left: 50%;
+  transform: translateX(-50%);
+  width: 110px; display: flex; justify-content: space-between;
+  opacity: 0; transition: 0.3s;
+}
+.pet-interact-blush::before, .pet-interact-blush::after {
+  content: ""; width: 25px; height: 12px; background: #ffb1bf; filter: blur(6px); border-radius: 50%;
+}
+
+/* 反應樣式（權重需蓋過 pet-mood-sad 的嘴型） */
+.pet-interact-body.actor-shocked .pet-interact-eye { width: 22px; height: 22px; top: 55px; }
+.pet-interact-body.actor-shocked .pet-interact-mouth {
+  width: 20px; height: 20px; border-radius: 50%; border: 4px solid #364055;
+  border-top: none;
+  top: 100px;
+}
+
+.pet-interact-body.actor-happy .pet-interact-blush { opacity: 0.8; }
+.pet-interact-body.actor-happy .pet-interact-mouth {
+  border-top: none;
+  border-bottom: 4px solid #364055;
+  border-radius: 0 0 20px 20px;
+  top: 100px;
+  height: 20px;
+  border-bottom-width: 6px;
+}
+
+.pet-actor-wrap {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+}
+
+.pet-interact-plant {
+  position: absolute;
+  bottom: 36px;
+  left: 12%;
+  width: 40px;
+  height: 52px;
+  background: linear-gradient(180deg, #8fd97a, #4f9a42);
+  border-radius: 55% 55% 42% 42%;
+  box-shadow: 0 10px 24px rgba(0,0,0,.12);
+  z-index: 1;
+}
+
+.pet-interact-hat {
+  position: absolute;
+  top: -14px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 52px;
+  height: 28px;
+  background: linear-gradient(180deg, #5c6aa8, #3d4a78);
+  border-radius: 10px 10px 4px 4px;
+  box-shadow: 0 4px 12px rgba(0,0,0,.15);
+  z-index: 3;
+  pointer-events: none;
+}
+
+.pet-interact-hat::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -6px;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-top: 8px solid #3d4a78;
+}
+
+/* iOS 儀表板 */
+.ios-dashboard { padding: 30px 30px 22px; background: rgba(255,255,255,0.05); }
+.ios-stat-header { display: flex; justify-content: space-between; align-items: center; color: white; margin-bottom: 25px; }
+.ios-progress-item { margin-bottom: 18px; }
+.ios-label { display: flex; justify-content: space-between; color: white; font-size: 0.85rem; margin-bottom: 8px; font-weight: 600; opacity: 0.9; }
+.ios-bar-bg { height: 10px; background: rgba(255,255,255,0.1); border-radius: 20px; overflow: hidden; }
+.ios-bar-fill {
+  width: 0%;
+  height: 100%;
+  border-radius: 20px;
+  background: linear-gradient(90deg, var(--accent2), var(--accent));
+  transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.pet-interact-asset-hidden { display: none !important; }
+
+/* 由內聯樣式收斂 */
+.resource-banner-title { margin: 0 0 6px; }
+.resource-banner-desc { margin: 0; color: var(--muted); line-height: 1.6; }
+.card-text-light { margin: 0 0 14px; color: rgba(255,255,255,.88); line-height: 1.7; }
+.grid-gap-12 { display: grid; gap: 12px; }
+.community-compose-intro { margin: 0 0 12px; color: var(--muted); font-size: .9rem; line-height: 1.55; }
+.ios-title { margin: 0; font-size: 1.35rem; font-weight: 600; color: #fff; letter-spacing: .02em; }
+.ios-subtitle { margin: 6px 0 0; font-size: .88rem; opacity: .85; color: rgba(255,255,255,.9); }
+.ios-meta { margin: 4px 0 0; font-size: .8rem; opacity: .75; color: rgba(255,255,255,.85); }
+.ios-header-icon { font-size: 1.5rem; }
+.ios-dashboard-hint { margin: 0; font-size: .88rem; line-height: 1.55; color: rgba(255,255,255,.82); }
+
+.ios-action-bar { display: flex; gap: 12px; margin-top: 10px; }
+.ios-action-btn {
+  flex: 1; border: none; padding: 16px; border-radius: 20px;
+  background: rgba(255,255,255,0.1); color: white; font-weight: 700;
+  cursor: pointer; transition: 0.2s;
+}
+.ios-action-btn:hover { background: rgba(255,255,255,0.2); transform: translateY(-2px); }
+
+@media (prefers-reduced-motion: reduce) {
+  .view-active { animation: viewFadeInReduced 0.15s ease-out forwards; }
+  @keyframes viewFadeInReduced {
+    from { opacity: 0.85; }
+    to { opacity: 1; }
+  }
+  .toast { transition: opacity 0.2s ease; }
+  .orb { animation: none !important; }
+  .ambient-glow::before,
+  .ambient-glow::after { animation: none !important; }
+  .pet,
+  .pet-interact-body { animation: none !important; }
+  .celebrate.active { animation: none; }
+  body { transition: none !important; }
+  html { scroll-behavior: auto; }
+  .ios-bar-fill { transition: none !important; }
+}
+  </style>
+</head>
+<body class="theme-morning">
+    <div class="onboarding active" id="onboarding">
+  <div class="onboarding-shell glass">
+    <!-- Step 1 -->
+    <section class="onboard-step active" data-step="1">
+      <div class="onboard-brand">
+        <div class="onboard-logo">✦</div>
+        <div>
+          <h2>Lumina 微光</h2>
+          <p>在迷茫的時刻，陪你孵化出更好的自己。</p>
+        </div>
+      </div>
+
+      <div class="onboard-hero">
+        <h1>先不用急著變厲害，<br>我們先一起把光找回來。</h1>
+        <p>
+          這裡沒有真實姓名、沒有比較壓力，只有匿名共鳴、
+          溫柔資源與一隻會陪你慢慢長大的小精靈。
+        </p>
+      </div>
+
+      <div class="onboard-actions">
+        <button class="onboard-primary" id="startOnboarding">開始孵化旅程</button>
+      </div>
+    </section>
+
+    <!-- Step 2 -->
+    <section class="onboard-step" data-step="2">
+      <div class="onboard-header">
+        <h3>匿名登入設定</h3>
+        <p>你可以保留真實世界的自己，只帶著現在的狀態進來。</p>
+      </div>
+
+      <div class="form-block">
+        <label class="input-label">匿名代號</label>
+        <input id="anonNameInput" class="onboard-input" type="text" maxlength="20" placeholder="例如：迷路旅人、慢慢來的人" />
+        <small class="input-tip">不填也可以，系統會自動幫你取名。</small>
+      </div>
+
+      <div class="form-block">
+        <label class="input-label">選擇目前狀態（可選 1~3 個）</label>
+        <div class="status-grid" id="statusGrid">
+          <button type="button" class="status-choice" data-tag="#待業第30天">#待業第30天</button>
+          <button type="button" class="status-choice" data-tag="#履歷苦手中">#履歷苦手中</button>
+          <button type="button" class="status-choice" data-tag="#體制內迷路中">#體制內迷路中</button>
+          <button type="button" class="status-choice" data-tag="#休學探索中">#休學探索中</button>
+          <button type="button" class="status-choice" data-tag="#面試焦慮中">#面試焦慮中</button>
+          <button type="button" class="status-choice" data-tag="#想重新開始">#想重新開始</button>
+        </div>
+      </div>
+
+      <div class="onboard-actions split">
+        <button class="onboard-secondary" data-go-step="1">上一步</button>
+        <button class="onboard-primary" id="toQuizStep">下一步</button>
+      </div>
+    </section>
+
+    <!-- Step 3 -->
+    <section class="onboard-step" data-step="3">
+      <div class="onboard-header">
+        <h3>快速心情測驗</h3>
+        <p>選一個最接近你現在狀態的描述，我們會替你孵化出專屬的小夥伴。</p>
+      </div>
+
+      <div class="quiz-grid" id="quizGrid">
+        <button class="quiz-card" data-pet="光精靈" data-egg="灰色迷茫蛋" data-trait="溫柔復原型" data-helper="沒關係，我們可以慢慢來。" data-mood="有點沒精神">
+          <span class="quiz-icon">☁</span>
+          <strong>我最近有點累，也常懷疑自己。</strong>
+          <small>適合：需要被安穩接住的你</small>
+        </button>
+
+        <button class="quiz-card" data-pet="星光獸" data-egg="琥珀星塵蛋" data-trait="行動恢復型" data-helper="先做一點點，也算前進。" data-mood="慢慢恢復中">
+          <span class="quiz-icon">✦</span>
+          <strong>我其實想改變，只是需要一點推力。</strong>
+          <small>適合：卡住但還想往前走的你</small>
+        </button>
+
+        <button class="quiz-card" data-pet="暖暖怪" data-egg="薄荷治癒蛋" data-trait="共鳴療癒型" data-helper="你不是一個人，我會一直在。" data-mood="比較有元氣">
+          <span class="quiz-icon">♡</span>
+          <strong>我很需要陪伴，也想把溫柔分給別人。</strong>
+          <small>適合：容易共感、願意互相抱抱的你</small>
+        </button>
+      </div>
+
+      <div class="selected-result" id="selectedResult">
+        尚未選擇你的孵化傾向
+      </div>
+
+      <div class="onboard-actions split">
+        <button class="onboard-secondary" data-go-step="2">上一步</button>
+        <button class="onboard-primary" id="toHatchStep" disabled>前往孵化</button>
+      </div>
+    </section>
+
+    <!-- Step 4 -->
+    <section class="onboard-step" data-step="4">
+      <div class="onboard-header center">
+        <h3>你的蛋已經準備好了</h3>
+        <p>它會記住你此刻的狀態，陪你一起慢慢變亮。</p>
+      </div>
+
+      <div class="egg-stage">
+        <div class="egg" id="eggVisual"></div>
+        <div class="egg-info">
+          <h4 id="eggName">灰色迷茫蛋</h4>
+          <p id="eggDesc">還沒選擇測驗結果</p>
+        </div>
+      </div>
+
+      <div class="onboard-actions center">
+        <button class="onboard-primary glow" id="hatchBtn">點擊孵化</button>
+      </div>
+    </section>
+
+    <!-- Step 5 -->
+    <section class="onboard-step" data-step="5">
+      <div class="onboard-header center">
+        <h3>孵化完成</h3>
+        <p>你的專屬夥伴已經誕生，接下來就一起慢慢前進吧。</p>
+      </div>
+
+      <div class="pet-reveal">
+        <div class="pet-birth" id="birthPet">✦</div>
+        <h4 id="birthPetName">光精靈</h4>
+        <p id="birthPetTrait">溫柔復原型</p>
+        <div class="birth-tags" id="birthTags"></div>
+      </div>
+
+      <div class="onboard-actions center">
+        <button class="onboard-primary" id="enterAppBtn">進入 Lumina</button>
+      </div>
+    </section>
+  </div>
+</div>
+
+  <div class="ambient-glow"></div>
+  <div class="toast" id="toast">完成任務，獲得 XP！</div>
+  <div class="celebrate" id="celebrate"></div>
+
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="logo"></div>
+        <div>
+          <h1>Lumina 微光</h1>
+          <p id="brandSubtitle">在迷茫的時刻，為你點亮一點點前進的光。</p>
+        </div>
+      </div>
+
+      <div class="theme-switcher">
+        <button class="chip active" data-theme="morning">清晨模式</button>
+        <button class="chip" data-theme="night">夜晚模式</button>
+        <button class="chip" data-theme="calm">療癒模式</button>
+      </div>
+    </header>
+
+
+
+  <main id="homeView" class="view-active">
+    <section class="hero">
+      <div class="hero-card glass">
+        <h2 id="heroGreeting">匿名共鳴、溫柔推播、陪伴成長。</h2>
+        <p>
+          這是一個結合匿名社群、智慧資源與電子寵物陪伴的快速互動原型。
+          你可以在這裡「拍拍」別人、完成任務累積 XP，讓你的光精靈從迷茫中慢慢恢復精神。
+        </p>
+        <div class="hero-meta" id="heroTags">
+            <div class="pill">#待業第30天</div>
+            <div class="pill">#履歷苦手中</div>
+            <div class="pill">#體制內迷路中</div>
+            <div class="pill">Contextual Floating Bar</div>
+        </div>
+
+      </div>
+
+      <div class="pet-stage glass">
+        <div class="room" id="room">
+          <div class="sun-window" id="sunWindow"></div>
+          <div class="plant" id="plant"></div>
+
+          <div class="pet pet-sad" id="pet">
+            <div class="pet-hat" id="petHat"></div>
+            <div class="mouth"></div>
+          </div>
+        </div>
+
+        <div class="pet-status">
+          <div class="stat-box">
+            <b id="petMood">有點沒精神</b>
+            <span>光精靈狀態</span>
+          </div>
+          <div class="stat-box">
+            <b id="roomState">紙箱房間</b>
+            <span>陪伴場景</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="content">
+      <div class="column">
+        <div class="card glass" id="communitySection">
+          <div class="section-title">
+            <h3>匿名共鳴社群</h3>
+            <small>Resonance Feed</small>
+          </div>
+
+          <div class="feed-list" id="homeCommunityFeed" aria-live="polite" aria-busy="false"></div>
+        </div>
+
+        <div class="card glass resource-card" id="resourceSection">
+            <div class="section-title">
+              <h3>智慧資源推播</h3>
+              <small>Gentle Support</small>
+            </div>
+
+            <div class="resource-banner">
+              <div class="resource-icon">💡</div>
+              <div>
+                <h3 class="resource-banner-title">今天適合你的微光資源</h3>
+                <p class="resource-banner-desc">
+                  根據你最近關注的內容，系統溫和推薦能真正幫上忙的下一步，
+                  不會一次塞給你太多，只給你現在最需要的一點光。
+                </p>
+              </div>
+            </div>
+
+            <div class="resource-grid">
+              <div class="resource-item">
+                <b>免費履歷健檢活動</b>
+                <p>適合 #待業中 / #履歷苦手中，先把第一版履歷做出來。</p>
+                <button class="soft-btn context-trigger" data-context="正在查看履歷健檢活動">
+                  立即查看
+                </button>
+              </div>
+
+              <div class="resource-item">
+                <b>面試焦慮 5 分鐘舒緩</b>
+                <p>呼吸練習＋短音頻，幫你把過快的心跳慢慢放下來。</p>
+                <button class="soft-btn context-trigger" data-context="正在做面試前舒練習">
+                  開始練習
+                </button>
+              </div>
+
+              <div class="resource-item">
+                <b>非典型學習路徑整理</b>
+                <p>如果你正在休學、轉職或探索中，這裡有更彈性的選項。</p>
+                <button class="soft-btn context-trigger" data-context="正在探索非典型教育資源">
+                  看看選項
+                </button>
+              </div>
+
+              <div class="resource-item">
+                <b>免費心理支持專線</b>
+                <p>若你最近焦慮、失眠或情緒低落，請先讓自己被接住。</p>
+                <button class="soft-btn context-trigger" data-context="正在尋找心理支持資源">
+                  溫柔求助
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="column">
+          <div class="card glass">
+            <div class="section-title">
+              <h3>成長儀表板</h3>
+              <small>Daily Progress</small>
+            </div>
+
+            <div class="stats-panel">
+              <div class="metric">
+                <strong id="xpValue">0</strong>
+                <span>XP 經驗值</span>
+              </div>
+              <div class="metric">
+                <strong id="coinValue">0</strong>
+                <span>金幣</span>
+              </div>
+              <div class="metric">
+                <strong id="patValue">0</strong>
+                <span>今日拍拍</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="card glass" id="taskSection">
+            <div class="section-title">
+              <h3>今日微任務</h3>
+              <small>Small Wins Matter</small>
+            </div>
+
+            <div class="task-list">
+              <div class="task" data-xp="10" data-coin="10" data-reward="你出門透氣了，獲得 10 XP / 10 金幣">
+                <div class="task-meta">
+                  <b>散步 10 分鐘</b>
+                  <span>小小離開房間，也算是前進。</span>
+                </div>
+                <button class="task-btn">完成 +10 XP</button>
+              </div>
+
+              <div class="task" data-xp="15" data-coin="15" data-reward="你鼓勵了一位陌生人，獲得 15 XP / 15 金幣">
+                <div class="task-meta">
+                  <b>鼓勵一位陌生人</b>
+                  <span>善意會回到你身上，也讓小毛球變得更有精神。</span>
+                </div>
+                <button class="task-btn">完成 +15 XP</button>
+              </div>
+
+              <div class="task" data-xp="50" data-coin="40" data-reward="你完成履歷草稿，獲得 50 XP / 40 金幣">
+                <div class="task-meta">
+                  <b>完成一份履歷草稿</b>
+                  <span>先做出 70 分版本，比停在腦中更重要。</span>
+                </div>
+                <button class="task-btn">完成 +50 XP</button>
+              </div>
+
+              <div class="task" data-xp="30" data-coin="25" data-reward="你預約了職涯諮詢，獲得 30 XP / 25 金幣">
+                <div class="task-meta">
+                  <b>預約一次職涯諮詢</b>
+                  <span>當你願意求助，就是很勇敢的一步。</span>
+                </div>
+                <button class="task-btn">完成 +30 XP</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="card glass">
+            <div class="section-title">
+              <h3>陪伴機制</h3>
+              <small>Pet Growth</small>
+            </div>
+
+            <p class="card-text-light">
+              當你累積經驗值與金幣時，光精靈會慢慢恢復精神，
+              房間也會從空空的紙箱，變成有陽光、有植物的小空間。
+            </p>
+
+            <div class="grid-gap-12">
+              <div class="resource-item">
+                <b>解鎖條件 A：20 XP</b>
+                <p>光精靈從「有點沒精神」變成「比較有元氣」。</p>
+              </div>
+              <div class="resource-item">
+                <b>解鎖條件 B：60 XP</b>
+                <p>房間出現「陽光窗戶」，陪伴感提升。</p>
+              </div>
+              <div class="resource-item">
+                <b>解鎖條件 C：100 XP</b>
+                <p>獲得「學士帽」與綠色植物，象徵新的開始。</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <p class="footer-note">
+        Lumina 快速原型 Demo：以匿名共鳴、溫柔資源推播、遊戲化成長為核心。
+      </p>
+  </main>
+
+  <main id="communityView" class="view-hidden">
+    <section class="community-page" aria-label="匿名共鳴社群">
+      <div class="card glass community-compose-card">
+        <div class="section-title">
+          <h3>留下你的心聲</h3>
+          <small>匿名分享</small>
+        </div>
+        <p class="community-compose-intro">
+          寫下此刻想說的話，按下發佈後會出現在下方動態；與首頁「匿名共鳴社群」區塊同步。
+        </p>
+        <div class="community-compose">
+          <label class="sr-only" for="communityMessageInput">匿名留言內容</label>
+          <textarea id="communityMessageInput" class="community-textarea" rows="1" maxlength="800" placeholder="例如：今天終於把履歷寄出去了，雖然還是很緊張…"></textarea>
+          <button type="button" class="publish-send-btn" id="communityPublishBtn" aria-label="發佈留言" title="發佈">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M22 2L11 13" />
+              <path d="M22 2l-7 20-4-9-9-4 20-7z" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="card glass">
+        <div class="section-title">
+          <h3>匿名共鳴社群</h3>
+          <small>Resonance Feed</small>
+        </div>
+        <div class="feed-list" id="pageCommunityFeed" aria-live="polite" aria-busy="false"></div>
+      </div>
+    </section>
+  </main>
+
+  <main id="petInteractView" class="view-hidden">
+    <section class="pet-interact-page" aria-label="陪伴精靈互動">
+      <div class="pet-interact-container glass">
+        <div class="pet-room-stage">
+          <div class="room-layer-glow" aria-hidden="true"></div>
+          <div
+            class="pet-dex-viewport"
+            id="petDexViewport"
+            tabindex="0"
+            role="region"
+            aria-roledescription="輪播"
+            aria-label="精靈圖鑑，可左右滑動切換"
+          >
+            <div class="pet-dex-track" id="petDexTrack">
+              <div class="pet-dex-slide" data-pet-id="lumina" data-pet-index="0">
+                <div class="pet-dex-slide-scene">
+                  <div class="room-layer-window pet-interact-asset-hidden" id="petInteractWindow" aria-hidden="true"></div>
+                  <div id="petInteractPlant" class="pet-interact-plant pet-interact-asset-hidden" aria-hidden="true"></div>
+                  <div class="pet-actor-wrap">
+                    <div id="petInteractHat" class="pet-interact-hat pet-interact-asset-hidden" aria-hidden="true"></div>
+                    <div id="petMainActor" class="pet-interact-body pet-mood-sad" role="button" tabindex="0" aria-label="點擊與光精靈互動">
+                      <div class="pet-interact-blush"></div>
+                      <div class="pet-interact-eye left"></div>
+                      <div class="pet-interact-eye right"></div>
+                      <div class="pet-interact-mouth"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="pet-dex-slide" data-pet-id="baiyu" data-pet-index="1">
+                <div class="pet-dex-slide-scene pet-dex-slide-scene--baiyu">
+                  <div class="baiyu-hug-scene" aria-hidden="true">
+                    <div class="baiyu-mom-glow"></div>
+                    <div class="baiyu-mom-body"></div>
+                    <div class="baiyu-mom-head"></div>
+                    <div class="baiyu-mom-wing baiyu-mom-wing--l"></div>
+                    <div class="baiyu-mom-wing baiyu-mom-wing--r"></div>
+                  </div>
+                  <div id="petBaiyuActor" class="pet-baiyu" role="button" tabindex="0" aria-label="白瑀鳥，點擊互動">
+                    <div class="pet-baiyu-shape">
+                      <div class="pet-baiyu-fold pet-baiyu-fold-a"></div>
+                      <div class="pet-baiyu-head"></div>
+                      <div class="pet-baiyu-body-quilt"></div>
+                      <div class="pet-baiyu-wing pet-baiyu-wing-l"></div>
+                      <div class="pet-baiyu-wing pet-baiyu-wing-r"></div>
+                    </div>
+                    <div class="pet-baiyu-notes" aria-hidden="true"><span>♪</span><span>♫</span><span>♪</span></div>
+                  </div>
+                  <div class="pet-dex-slide-lock" id="petBaiyuLock">
+                    <span class="pet-dex-lock-icon" aria-hidden="true">🔒</span>
+                    <span class="pet-dex-lock-text">未解鎖 · 圖鑑預覽</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <p class="pet-dex-swipe-hint">左右滑動瀏覽精靈圖鑑</p>
+            <div class="pet-dex-dots" role="tablist" aria-label="切換精靈">
+              <button type="button" class="pet-dex-dot active" data-dex-dot="0" role="tab" aria-selected="true" aria-label="光精靈"></button>
+              <button type="button" class="pet-dex-dot" data-dex-dot="1" role="tab" aria-selected="false" aria-label="白瑀鳥"></button>
+            </div>
+          </div>
+        </div>
+        <div class="ios-dashboard">
+          <div class="ios-stat-header">
+            <div>
+              <h2 class="ios-title" id="petInteractTitle">精靈圖鑑</h2>
+              <p class="ios-subtitle" id="actorName">光精靈</p>
+              <p class="ios-meta" id="petInteractMood">有點沒精神</p>
+            </div>
+            <span class="ios-header-icon" id="petInteractIcon" aria-hidden="true">✦</span>
+          </div>
+          <div class="ios-progress-item">
+            <div class="ios-label">
+              <span id="petIntimacyLabel">親密度（與首頁 XP 同步）</span>
+              <span id="valIntimacy">0%</span>
+            </div>
+            <div class="ios-bar-bg">
+              <div class="ios-bar-fill" id="barIntimacy"></div>
+            </div>
+          </div>
+          <p class="ios-dashboard-hint" id="petDexDashboardHint">
+            左右滑動舞台可瀏覽精靈圖鑑。點擊光精靈：大多數時候會開心回應，偶爾會被嚇一跳。累積 XP 可提升親密度與首頁房間佈景。
+          </p>
+        </div>
+      </div>
+
+      <div class="card glass pet-page-companion-card">
+        <div class="section-title">
+          <h3>陪伴機制</h3>
+          <small>Pet Growth</small>
+        </div>
+
+        <p class="card-text-light">
+          當你累積經驗值與金幣時，光精靈會慢慢恢復精神，
+          房間也會從空空的紙箱，變成有陽光、有植物的小空間。
+        </p>
+
+        <div class="grid-gap-12">
+          <div class="resource-item">
+            <b>解鎖條件 A：20 XP</b>
+            <p>光精靈從「有點沒精神」變成「比較有元氣」。</p>
+          </div>
+          <div class="resource-item">
+            <b>解鎖條件 B：60 XP</b>
+            <p>房間出現「陽光窗戶」，陪伴感提升。</p>
+          </div>
+          <div class="resource-item">
+            <b>解鎖條件 C：100 XP</b>
+            <p>獲得「學士帽」與綠色植物，象徵新的開始。</p>
+          </div>
+          <div class="resource-item">
+            <b>圖鑑：白瑀鳥 · 45 XP</b>
+            <p>在上方舞台左右滑動可預覽；達標後可觸摸，棉被身形會搖擺並冒出音符。</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+    <nav class="floating-bar glass" id="floatingBar">
+      <div class="floating-left">
+        <button type="button" class="nav-btn active" data-nav="home" data-context="正在瀏覽首頁動態">首頁</button>
+        <button type="button" class="nav-btn" data-nav="community" data-context="正在查看共鳴社群">社群</button>
+        <button type="button" class="nav-btn" data-nav="tasks" data-context="正在查看任務清單">任務</button>
+        <button type="button" class="nav-btn" data-nav="pet" data-context="正在與精靈互動">精靈</button>
+      </div>
+      <div class="context-pill" id="contextPill">正在瀏覽首頁動態</div>
+    </nav>
+  </div>
+
+<script>
+  // 1. 全域狀態管理
+  let state = {
+    xp: 0,
+    coins: 0,
+    pats: 0,
+    activeTab: 'home',
+    homeScrollTarget: 'home',
+    petDexIndex: 0,
+    /** 白瑀鳥專用親密度，解鎖後由 0 起算，與全站 state.xp 分開 */
+    baiyuIntimacyXp: 0,
+    /** XP 首次達 GAME.XP_PET_BAIYU 時已顯示解鎖提醒，避免重複 Toast */
+    baiyuUnlockToastShown: false,
+    profile: {
+      name: '旅人',
+      tags: [],
+      petType: '光精靈',
+      icon: '✦'
+    },
+    communityPosts: [
+      {
+        id: 'seed-1',
+        avatar: '☁',
+        author: '匿名旅人 A',
+        tags: ['#待業第92天', '#面試挫敗中'],
+        timeLabel: '剛剛',
+        body: '今天又收到感謝函，一度覺得自己是不是不夠好。\n但我決定先去散步 10 分鐘，再回來修履歷。希望有人也正在撐過這種時刻。',
+        patWarm: 5,
+        secondaryLabel: '留言鼓勵',
+        secondaryContext: '正在安慰一位陌生人',
+        isOwn: false,
+        replies: []
+      },
+      {
+        id: 'seed-2',
+        avatar: '✦',
+        author: '匿名旅人 B',
+        tags: ['#履歷苦手中', '#成功上岸'],
+        timeLabel: '2 小時前',
+        body: '分享一個對我很有用的方法：先不要追求完美履歷，先做出「70 分版本」。\n真的送出去之後，焦慮會比一直卡住少很多。',
+        patWarm: 8,
+        secondaryLabel: '收藏靈感',
+        secondaryContext: '正在收藏履歷經驗文',
+        isOwn: false,
+        replies: []
+      }
+    ]
+  };
+
+  const NAV_SCROLL_IDS = {
+    home: 'homeView',
+    tasks: 'taskSection'
+  };
+
+  /** 數值集中維護（不影響 UI 呈現，僅便於調整平衡） */
+  const GAME = {
+    XP_PAT: 5,
+    XP_PUBLISH: 10,
+    XP_ENCOURAGE: 10,
+    XP_PET_TAP: 1,
+    TOAST_MS: 2200,
+    XP_HAPPY: 20,
+    XP_WINDOW: 60,
+    XP_FULL: 100,
+    /** 白瑀鳥圖鑑互動解鎖門檻 */
+    XP_PET_BAIYU: 45
+  };
+
+  const PET_DEX = [
+    { id: 'lumina', name: '光精靈' },
+    { id: 'baiyu', name: '白瑀鳥' }
+  ];
+
+  let floatingNavBound = false;
+  let appClickDelegateBound = false;
+
+  // 2. 獲取核心 DOM 元素
+  const onboarding = document.getElementById('onboarding');
+  const appRoot = document.querySelector('.app');
+  const toast = document.getElementById('toast');
+  const xpValue = document.getElementById('xpValue');
+  const coinValue = document.getElementById('coinValue');
+  const patValue = document.getElementById('patValue');
+  const contextPill = document.getElementById('contextPill');
+  const floatingBar = document.getElementById('floatingBar');
+  
+  // 首頁精靈相關元素
+  const pet = document.getElementById('pet');
+  const petMoodText = document.getElementById('petMood');
+  const roomStateText = document.getElementById('roomState');
+  const sunWindow = document.getElementById('sunWindow');
+  const plant = document.getElementById('plant');
+  const petHat = document.getElementById('petHat');
+
+  const petInteractWindowEl = document.getElementById('petInteractWindow');
+  const petInteractPlantEl = document.getElementById('petInteractPlant');
+  const petInteractHatEl = document.getElementById('petInteractHat');
+  const petMainActorEl = document.getElementById('petMainActor');
+  const petInteractMoodEl = document.getElementById('petInteractMood');
+  const barIntimacyEl = document.getElementById('barIntimacy');
+  const valIntimacyEl = document.getElementById('valIntimacy');
+  const petDexViewport = document.getElementById('petDexViewport');
+  const petDexTrack = document.getElementById('petDexTrack');
+  const petBaiyuActor = document.getElementById('petBaiyuActor');
+  const petBaiyuLock = document.getElementById('petBaiyuLock');
+  const petDexDashboardHint = document.getElementById('petDexDashboardHint');
+
+  let dexSwipeSuppressUntil = 0;
+  let petDexBound = false;
+
+  function prefersReducedMotion() {
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  }
+
+  // --- 通用 UI 功能 ---
+
+  function showToast(message) {
+    if (!toast) return;
+    toast.textContent = message;
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), GAME.TOAST_MS);
+  }
+
+  function createOrbs(button) {
+    if (!button || prefersReducedMotion()) return;
+    const rect = button.getBoundingClientRect();
+    for (let i = 0; i < 6; i++) {
+      const orb = document.createElement('span');
+      orb.className = 'orb';
+      orb.style.left = rect.left + rect.width / 2 + (Math.random() * 20 - 10) + 'px';
+      orb.style.top = rect.top + window.scrollY + 'px';
+      orb.style.setProperty('--drift', (Math.random() * 40 - 20) + 'px');
+      document.body.appendChild(orb);
+      setTimeout(() => orb.remove(), 1000);
+    }
+  }
+
+  function isBaiyuUnlocked() {
+    return state.xp >= GAME.XP_PET_BAIYU;
+  }
+
+  function syncPetDexTrack() {
+    if (!petDexTrack) return;
+    petDexTrack.style.transform = `translateX(-${state.petDexIndex * 50}%)`;
+  }
+
+  function setPetDexIndex(next) {
+    const max = PET_DEX.length - 1;
+    const i = Math.max(0, Math.min(max, next));
+    if (i === state.petDexIndex) return;
+    state.petDexIndex = i;
+    syncPetDexTrack();
+    updatePetDexChrome();
+  }
+
+  function updatePetDexChrome() {
+    const idx = state.petDexIndex;
+    const entry = PET_DEX[idx];
+    if (!entry) return;
+
+    const baiOk = isBaiyuUnlocked();
+    if (petBaiyuLock) {
+      petBaiyuLock.toggleAttribute('hidden', baiOk);
+      petBaiyuLock.setAttribute('aria-hidden', baiOk ? 'true' : 'false');
+    }
+    if (petBaiyuActor) {
+      petBaiyuActor.classList.toggle('pet-baiyu-locked', !baiOk);
+      petBaiyuActor.setAttribute('aria-disabled', baiOk ? 'false' : 'true');
+    }
+
+    document.querySelectorAll('.pet-dex-dot').forEach((dot) => {
+      const di = Number(dot.dataset.dexDot);
+      const on = di === idx;
+      dot.classList.toggle('active', on);
+      dot.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+
+    const actorNameEl = document.getElementById('actorName');
+    const iconEl = document.getElementById('petInteractIcon');
+
+    if (entry.id === 'lumina') {
+      if (actorNameEl) actorNameEl.textContent = state.profile.petType || '光精靈';
+      if (iconEl) iconEl.textContent = state.profile.icon || '✦';
+      if (petInteractMoodEl && petMoodText) petInteractMoodEl.textContent = petMoodText.textContent;
+      if (petDexDashboardHint) {
+        petDexDashboardHint.textContent =
+          '左右滑動舞台可瀏覽更多精靈。點擊光精靈：大多數時候會開心回應，偶爾會被嚇一跳。累積 XP 可提升親密度與首頁房間佈景。';
+      }
+    } else if (entry.id === 'baiyu') {
+      if (actorNameEl) actorNameEl.textContent = '白瑀鳥';
+      if (iconEl) iconEl.textContent = '☁';
+      if (petInteractMoodEl) {
+        petInteractMoodEl.textContent = baiOk
+          ? '棉被鼓起像翅膀，觸碰時會搖擺哼唱'
+          : `未解鎖 · 累積 ${GAME.XP_PET_BAIYU} XP 可互動`;
+      }
+      if (petDexDashboardHint) {
+        petDexDashboardHint.textContent = baiOk
+          ? '陪伴場景裡，鳥媽媽正溫暖地抱著白瑀鳥。點擊白瑀鳥：它會舞動身體，棉被褶皺像展翅，並冒出輕快的音符。白瑀鳥親密度自解鎖起另計，與光精靈分開。'
+          : `圖鑑預覽：可先看看鳥媽媽溫暖抱著白瑀鳥的場景。達到 ${GAME.XP_PET_BAIYU} XP 後即可觸摸互動；滑回左側可繼續陪伴光精靈。`;
+      }
+    }
+
+    const intLabel = document.getElementById('petIntimacyLabel');
+    if (barIntimacyEl && valIntimacyEl) {
+      const dexEntry = PET_DEX[state.petDexIndex];
+      let progress;
+      let labelText = '親密度（與首頁 XP 同步）';
+      if (dexEntry?.id === 'baiyu' && baiOk) {
+        progress = Math.min(state.baiyuIntimacyXp, GAME.XP_FULL);
+        labelText = '親密度（白瑀鳥 · 解鎖後由 0 起算）';
+      } else {
+        progress = Math.min(state.xp, GAME.XP_FULL);
+      }
+      barIntimacyEl.style.width = progress + '%';
+      valIntimacyEl.textContent = progress + '%';
+      if (intLabel) intLabel.textContent = labelText;
+    }
+  }
+
+  function handleLuminaTap() {
+    if (!petMainActorEl) return;
+    const rand = Math.random();
+    if (rand > 0.8) {
+      petMainActorEl.classList.add('actor-shocked');
+      showToast('精靈被嚇一跳！ 😮');
+      setTimeout(() => petMainActorEl.classList.remove('actor-shocked'), 2000);
+    } else {
+      petMainActorEl.classList.add('actor-happy');
+      state.xp += GAME.XP_PET_TAP;
+      updateUI();
+      showToast('精靈感覺很開心 ✨');
+      setTimeout(() => petMainActorEl.classList.remove('actor-happy'), 2000);
+    }
+    createOrbs(petMainActorEl);
+  }
+
+  function handleBaiyuTap() {
+    if (!petBaiyuActor) return;
+    if (!isBaiyuUnlocked()) {
+      showToast(`白瑀鳥將於累積 ${GAME.XP_PET_BAIYU} XP 後解鎖互動`);
+      return;
+    }
+    petBaiyuActor.classList.remove('dancing', 'singing');
+    void petBaiyuActor.offsetWidth;
+    petBaiyuActor.classList.add('dancing', 'singing');
+    state.xp += GAME.XP_PET_TAP;
+    state.baiyuIntimacyXp = Math.min(GAME.XP_FULL, state.baiyuIntimacyXp + GAME.XP_PET_TAP);
+    updateUI();
+    showToast('白瑀鳥裹著棉被搖啊搖，輕聲唱著歌 ✨');
+    const ms = prefersReducedMotion() ? 700 : 1900;
+    setTimeout(() => {
+      petBaiyuActor.classList.remove('dancing', 'singing');
+    }, ms);
+    createOrbs(petBaiyuActor);
+  }
+
+  function bindPetDex() {
+    if (!petDexViewport || petDexBound) return;
+    petDexBound = true;
+
+    syncPetDexTrack();
+    updatePetDexChrome();
+
+    petDexViewport.addEventListener('click', (e) => {
+      if (Date.now() < dexSwipeSuppressUntil) return;
+      if (e.target.closest('.pet-dex-dot')) return;
+      if (e.target.closest('#petMainActor')) handleLuminaTap();
+      else if (e.target.closest('#petBaiyuActor')) handleBaiyuTap();
+    });
+
+    petDexViewport.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        setPetDexIndex(state.petDexIndex - 1);
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        setPetDexIndex(state.petDexIndex + 1);
+      }
+    });
+
+    document.querySelectorAll('.pet-dex-dot').forEach((btn) => {
+      btn.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        setPetDexIndex(Number(btn.dataset.dexDot));
+      });
+    });
+
+    let swipeX0 = 0;
+    let swipeActive = false;
+    let swipeMoved = false;
+
+    const onSwipeStart = (clientX) => {
+      swipeActive = true;
+      swipeMoved = false;
+      swipeX0 = clientX;
+    };
+    const onSwipeMove = (clientX) => {
+      if (!swipeActive) return;
+      if (Math.abs(clientX - swipeX0) > 12) swipeMoved = true;
+    };
+    const onSwipeEnd = (clientX) => {
+      if (!swipeActive) return;
+      swipeActive = false;
+      const dx = clientX - swipeX0;
+      if (swipeMoved && Math.abs(dx) > 36) {
+        dexSwipeSuppressUntil = Date.now() + 380;
+        if (dx > 0) setPetDexIndex(state.petDexIndex - 1);
+        else setPetDexIndex(state.petDexIndex + 1);
+      }
+    };
+
+    petDexViewport.addEventListener('touchstart', (e) => {
+      if (e.touches.length !== 1) return;
+      if (e.target.closest('.pet-dex-dot')) return;
+      onSwipeStart(e.touches[0].clientX);
+    }, { passive: true });
+    petDexViewport.addEventListener('touchmove', (e) => {
+      if (e.touches.length !== 1) return;
+      onSwipeMove(e.touches[0].clientX);
+    }, { passive: true });
+    petDexViewport.addEventListener('touchend', (e) => {
+      if (e.changedTouches.length < 1) return;
+      onSwipeEnd(e.changedTouches[0].clientX);
+    }, { passive: true });
+
+    petDexViewport.addEventListener('pointerdown', (e) => {
+      if (e.pointerType === 'touch') return;
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      if (e.target.closest('.pet-dex-dot')) return;
+      onSwipeStart(e.clientX);
+    });
+    petDexViewport.addEventListener('pointermove', (e) => {
+      if (e.pointerType === 'touch') return;
+      if (!swipeActive) return;
+      onSwipeMove(e.clientX);
+    });
+    petDexViewport.addEventListener('pointerup', (e) => {
+      if (e.pointerType === 'touch') return;
+      if (!swipeActive) return;
+      onSwipeEnd(e.clientX);
+    });
+    petDexViewport.addEventListener('pointercancel', () => {
+      swipeActive = false;
+    });
+  }
+
+  function buildReplyElement(reply) {
+    const wrap = document.createElement('div');
+    wrap.className = 'post-reply';
+    wrap.dataset.replyId = reply.id;
+    const meta = document.createElement('div');
+    meta.className = 'post-reply-meta';
+    meta.textContent = (reply.author || '匿名') + ' · ' + (reply.timeLabel || '剛剛');
+    const body = document.createElement('p');
+    body.className = 'post-reply-body';
+    body.textContent = reply.body || '';
+    wrap.appendChild(meta);
+    wrap.appendChild(body);
+    return wrap;
+  }
+
+  function closeAllEncourageSlots() {
+    if (!appRoot) return;
+    appRoot.querySelectorAll('.post-encourage-slot').forEach((el) => {
+      el.hidden = true;
+    });
+    appRoot.querySelectorAll('.post-encourage-btn').forEach((el) => {
+      el.hidden = false;
+    });
+  }
+
+  /** 預設單行高度；換行或內容變多時才長高（.post-encourage-textarea、.community-textarea） */
+  function adjustAutoGrowTextarea(el) {
+    if (!el || el.tagName !== 'TEXTAREA') return;
+    if (!el.classList.contains('post-encourage-textarea') && !el.classList.contains('community-textarea')) return;
+    const styles = window.getComputedStyle(el);
+    const lhParsed = parseFloat(styles.lineHeight);
+    const fontSize = parseFloat(styles.fontSize) || 14;
+    const fallbackMult = el.classList.contains('community-textarea') ? 1.6 : 1.55;
+    const lineHeight = Number.isFinite(lhParsed) && lhParsed > 0 ? lhParsed : fontSize * fallbackMult;
+    const padY = parseFloat(styles.paddingTop) + parseFloat(styles.paddingBottom);
+    const borderY = parseFloat(styles.borderTopWidth) + parseFloat(styles.borderBottomWidth);
+    const minH = Math.ceil(lineHeight + padY + borderY);
+    let maxH = 192;
+    const mh = styles.maxHeight;
+    if (mh && mh !== 'none') {
+      if (mh.endsWith('px')) maxH = parseFloat(mh);
+      else if (mh.endsWith('rem')) maxH = parseFloat(mh) * 16;
+    }
+
+    el.style.height = '0px';
+    const contentH = el.scrollHeight;
+    const next = Math.min(Math.max(contentH, minH), maxH);
+    el.style.height = next + 'px';
+    el.style.overflowY = contentH > maxH ? 'auto' : 'hidden';
+  }
+
+  function buildPostElement(post) {
+    const article = document.createElement('article');
+    article.className = 'post' + (post.isOwn ? ' post--own' : '');
+    article.dataset.postId = post.id;
+
+    const head = document.createElement('div');
+    head.className = 'post-head';
+
+    const avatarTag = document.createElement('div');
+    avatarTag.className = 'avatar-tag';
+
+    const av = document.createElement('div');
+    av.className = 'anon-avatar';
+    av.textContent = post.avatar || '✦';
+
+    const meta = document.createElement('div');
+    const strong = document.createElement('strong');
+    strong.textContent = post.author || '匿名旅人';
+    meta.appendChild(strong);
+    const tagsDiv = document.createElement('div');
+    tagsDiv.className = 'post-tags';
+    (post.tags || []).forEach((tag) => {
+      const sp = document.createElement('span');
+      sp.className = 'mini-tag';
+      sp.textContent = tag;
+      tagsDiv.appendChild(sp);
+    });
+    meta.appendChild(tagsDiv);
+
+    avatarTag.appendChild(av);
+    avatarTag.appendChild(meta);
+
+    const time = document.createElement('small');
+    time.style.color = 'var(--muted)';
+    time.textContent = post.timeLabel || '剛剛';
+
+    head.appendChild(avatarTag);
+    head.appendChild(time);
+
+    const p = document.createElement('p');
+    p.textContent = post.body || '';
+
+    const actions = document.createElement('div');
+    actions.className = 'post-actions';
+
+    if (post.isOwn) {
+      const badge = document.createElement('span');
+      badge.className = 'post-own-badge';
+      badge.textContent = '我的留言';
+      actions.appendChild(badge);
+    } else {
+      const pat = document.createElement('button');
+      pat.type = 'button';
+      pat.className = 'pat-btn btn-surface-pat-like';
+      pat.dataset.warm = String(post.patWarm != null ? post.patWarm : 5);
+      pat.textContent = '👏 拍拍';
+      actions.appendChild(pat);
+
+      const isEncourage = post.secondaryLabel === '留言鼓勵';
+      if (isEncourage) {
+        const encBtn = document.createElement('button');
+        encBtn.type = 'button';
+        encBtn.className = 'post-encourage-btn btn-surface-pat-like';
+        encBtn.dataset.postId = post.id;
+        encBtn.textContent = '留言鼓勵';
+        actions.appendChild(encBtn);
+      } else {
+        const soft = document.createElement('button');
+        soft.type = 'button';
+        soft.className = 'soft-btn context-trigger';
+        soft.dataset.context = post.secondaryContext || '正在互動';
+        soft.textContent = post.secondaryLabel || '互動';
+        actions.appendChild(soft);
+      }
+    }
+
+    const showEncourageUi = !post.isOwn && post.secondaryLabel === '留言鼓勵';
+    let encourageSlot = null;
+    if (showEncourageUi) {
+      encourageSlot = document.createElement('div');
+      encourageSlot.className = 'post-encourage-slot';
+      encourageSlot.hidden = true;
+      const row = document.createElement('div');
+      row.className = 'post-encourage-row';
+      const encTa = document.createElement('textarea');
+      encTa.className = 'post-encourage-textarea';
+      encTa.rows = 1;
+      encTa.maxLength = 500;
+      encTa.placeholder = '寫下一句鼓勵或共鳴…';
+      encTa.setAttribute('aria-label', '鼓勵留言內容');
+      const encSend = document.createElement('button');
+      encSend.type = 'button';
+      encSend.className = 'post-encourage-send';
+      encSend.textContent = '發送';
+      encSend.setAttribute('aria-label', '送出鼓勵留言');
+      row.appendChild(encTa);
+      row.appendChild(encSend);
+      encourageSlot.appendChild(row);
+    }
+
+    const repliesWrap = document.createElement('div');
+    repliesWrap.className = 'post-replies';
+    (post.replies || []).forEach((r) => {
+      repliesWrap.appendChild(buildReplyElement(r));
+    });
+
+    article.appendChild(head);
+    article.appendChild(p);
+    article.appendChild(actions);
+    if (encourageSlot) {
+      article.appendChild(encourageSlot);
+    }
+    if (showEncourageUi || (post.replies && post.replies.length > 0)) {
+      article.appendChild(repliesWrap);
+    }
+
+    return article;
+  }
+
+  function renderCommunityFeeds() {
+    ['homeCommunityFeed', 'pageCommunityFeed'].forEach((id) => {
+      const box = document.getElementById(id);
+      if (!box) return;
+      box.replaceChildren();
+      state.communityPosts.forEach((post) => {
+        box.appendChild(buildPostElement(post));
+      });
+    });
+  }
+
+  function onCommunityPublish() {
+    const ta = document.getElementById('communityMessageInput');
+    if (!ta) return;
+    const text = ta.value.trim();
+    if (!text) {
+      showToast('先寫下一段想說的話，再按發佈');
+      return;
+    }
+    const id = 'me-' + Date.now();
+    const tags = (state.profile.tags && state.profile.tags.length)
+      ? state.profile.tags.slice(0, 3)
+      : ['#微光旅人'];
+    const post = {
+      id,
+      avatar: state.profile.icon || '✦',
+      author: '匿名・' + (state.profile.name || '旅人'),
+      tags,
+      timeLabel: '剛剛',
+      body: text,
+      patWarm: 5,
+      isOwn: true,
+      replies: []
+    };
+    state.communityPosts.push(post);
+    state.xp += GAME.XP_PUBLISH;
+    ta.value = '';
+    requestAnimationFrame(() => adjustAutoGrowTextarea(ta));
+    renderCommunityFeeds();
+    updateUI();
+    showToast('已發佈，謝謝你願意說出來 · +' + GAME.XP_PUBLISH + ' XP');
+    requestAnimationFrame(() => {
+      const pageBox = document.getElementById('pageCommunityFeed');
+      const el = pageBox && pageBox.querySelector('[data-post-id="' + id + '"]');
+      const smooth = !prefersReducedMotion();
+      el?.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto', block: 'nearest' });
+    });
+  }
+
+  function bindAppClickDelegation() {
+    if (!appRoot || appClickDelegateBound) return;
+    appClickDelegateBound = true;
+    appRoot.addEventListener('input', (e) => {
+      const ta = e.target && e.target.closest && e.target.closest('.post-encourage-textarea, .community-textarea');
+      if (ta && appRoot.contains(ta)) adjustAutoGrowTextarea(ta);
+    });
+    appRoot.addEventListener('click', (e) => {
+      const chip = e.target.closest('.chip');
+      if (chip && appRoot.contains(chip) && chip.dataset.theme) {
+        const theme = chip.dataset.theme;
+        document.body.className = 'theme-' + theme;
+        appRoot.querySelectorAll('.chip').forEach((c) => c.classList.remove('active'));
+        chip.classList.add('active');
+        showToast('已切換為 ' + chip.textContent);
+        return;
+      }
+
+      const taskBtn = e.target.closest('.task-btn');
+      if (taskBtn && appRoot.contains(taskBtn)) {
+        const task = taskBtn.closest('.task');
+        if (!task || task.classList.contains('done')) return;
+        const xpGain = parseInt(task.dataset.xp || '10', 10);
+        state.xp += xpGain;
+        task.classList.add('done');
+        taskBtn.textContent = '已完成';
+        updateUI();
+        showToast('任務完成！獲得 ' + xpGain + ' XP');
+        return;
+      }
+
+      const sendEnc = e.target.closest('.post-encourage-send');
+      if (sendEnc && appRoot.contains(sendEnc)) {
+        const article = sendEnc.closest('.post');
+        const postId = article && article.dataset.postId;
+        const ta = article && article.querySelector('.post-encourage-textarea');
+        const raw = ta && ta.value ? ta.value.trim() : '';
+        if (!raw) {
+          showToast('先寫下想說的話，再按發送');
+          return;
+        }
+        const target = state.communityPosts.find((p) => p.id === postId);
+        if (!target) return;
+        if (!target.replies) target.replies = [];
+        target.replies.push({
+          id: 'rp-' + Date.now(),
+          body: raw,
+          timeLabel: '剛剛',
+          author: '匿名・' + (state.profile.name || '旅人')
+        });
+        if (contextPill) contextPill.textContent = '正在安慰一位陌生人';
+        state.xp += GAME.XP_ENCOURAGE;
+        closeAllEncourageSlots();
+        renderCommunityFeeds();
+        updateUI();
+        showToast('鼓勵已送出 · +' + GAME.XP_ENCOURAGE + ' XP');
+        return;
+      }
+
+      const encBtn = e.target.closest('.post-encourage-btn');
+      if (encBtn && appRoot.contains(encBtn)) {
+        closeAllEncourageSlots();
+        const article = encBtn.closest('.post');
+        const slot = article && article.querySelector('.post-encourage-slot');
+        if (slot) {
+          encBtn.hidden = true;
+          slot.hidden = false;
+          const t = slot.querySelector('.post-encourage-textarea');
+          if (t) t.value = '';
+          requestAnimationFrame(() => {
+            if (t) {
+              adjustAutoGrowTextarea(t);
+              t.focus();
+            }
+          });
+        }
+        if (contextPill) contextPill.textContent = '正在安慰一位陌生人';
+        return;
+      }
+
+      const pat = e.target.closest('.pat-btn');
+      if (pat && appRoot.contains(pat)) {
+        state.pats += 1;
+        state.xp += GAME.XP_PAT;
+        createOrbs(pat);
+        updateUI();
+        showToast('你的拍拍傳遞了溫暖！ +' + GAME.XP_PAT + ' XP');
+        return;
+      }
+      const soft = e.target.closest('.soft-btn, .context-trigger');
+      if (soft && appRoot.contains(soft) && soft.id !== 'communityPublishBtn') {
+        const context = soft.dataset.context || '正在互動';
+        if (contextPill) contextPill.textContent = context;
+        showToast('狀態更新：' + context);
+      }
+    });
+  }
+
+  // --- [核心修復] 同步更新全站 UI 與進化機制 ---
+  function updateUI() {
+    if(xpValue) xpValue.textContent = state.xp;
+    if(coinValue) coinValue.textContent = state.coins;
+    if(patValue) patValue.textContent = state.pats;
+
+    // 陪伴機制解鎖邏輯
+    if (pet) {
+      if (state.xp >= GAME.XP_FULL) {
+        pet.className = 'pet happy';
+        if (petMoodText) petMoodText.textContent = '閃閃發亮';
+        if (roomStateText) roomStateText.textContent = '陽光植物小空間';
+        if (sunWindow) sunWindow.style.display = 'block';
+        if (plant) plant.style.display = 'block';
+        if (petHat) petHat.style.display = 'block';
+      } else if (state.xp >= GAME.XP_WINDOW) {
+        pet.className = 'pet happy';
+        if (petMoodText) petMoodText.textContent = '比較有元氣';
+        if (roomStateText) roomStateText.textContent = '有陽光的房間';
+        if (sunWindow) sunWindow.style.display = 'block';
+        if (plant) plant.style.display = 'none';
+        if (petHat) petHat.style.display = 'none';
+      } else if (state.xp >= GAME.XP_HAPPY) {
+        pet.className = 'pet happy';
+        if (petMoodText) petMoodText.textContent = '比較有元氣';
+        if (roomStateText) roomStateText.textContent = '整理好的紙箱';
+        if (sunWindow) sunWindow.style.display = 'none';
+        if (plant) plant.style.display = 'none';
+        if (petHat) petHat.style.display = 'none';
+      } else {
+        pet.className = 'pet pet-sad';
+        if (petMoodText) petMoodText.textContent = '有點沒精神';
+        if (roomStateText) roomStateText.textContent = '紙箱房間';
+        if (sunWindow) sunWindow.style.display = 'none';
+        if (plant) plant.style.display = 'none';
+        if (petHat) petHat.style.display = 'none';
+      }
+    }
+
+    if (petInteractWindowEl) {
+      petInteractWindowEl.classList.toggle('pet-interact-asset-hidden', state.xp < GAME.XP_WINDOW);
+    }
+    if (petInteractPlantEl) {
+      petInteractPlantEl.classList.toggle('pet-interact-asset-hidden', state.xp < GAME.XP_FULL);
+    }
+    if (petInteractHatEl) {
+      petInteractHatEl.classList.toggle('pet-interact-asset-hidden', state.xp < GAME.XP_FULL);
+    }
+
+    if (petMainActorEl) {
+      petMainActorEl.classList.remove('pet-mood-sad', 'pet-mood-happy');
+      petMainActorEl.classList.add(state.xp >= GAME.XP_HAPPY ? 'pet-mood-happy' : 'pet-mood-sad');
+    }
+
+    if (state.xp >= GAME.XP_PET_BAIYU && !state.baiyuUnlockToastShown) {
+      state.baiyuUnlockToastShown = true;
+      showToast('新精靈解鎖：白瑀鳥已加入圖鑑！到「精靈」分頁左右滑動舞台即可遇見牠 ✨');
+    }
+
+    updatePetDexChrome();
+  }
+
+  /** 依 data-nav 同步導覽選取狀態與情境文案（單一出口） */
+  function syncFloatingNav(navKey) {
+    if (!floatingBar) return;
+    floatingBar.querySelectorAll('.nav-btn').forEach((b) => {
+      b.classList.toggle('active', b.dataset.nav === navKey);
+    });
+    const activeBtn = floatingBar.querySelector(`.nav-btn[data-nav="${navKey}"]`);
+    if (contextPill && activeBtn?.dataset.context) {
+      contextPill.textContent = activeBtn.dataset.context;
+    }
+  }
+
+  function onFloatingNavClick(e) {
+    const btn = e.target.closest('.nav-btn');
+    if (!floatingBar || !btn || !floatingBar.contains(btn)) return;
+    const navKey = btn.dataset.nav;
+    if (!navKey) return;
+
+    if (navKey !== 'pet') {
+      state.homeScrollTarget = navKey;
+    }
+
+    syncFloatingNav(navKey);
+
+    if (navKey === 'pet') {
+      switchView('pet');
+      return;
+    }
+
+    if (navKey === 'community') {
+      switchView('community');
+      return;
+    }
+
+    switchView('home');
+    const scrollId = NAV_SCROLL_IDS[navKey];
+    const scrollEl = scrollId ? document.getElementById(scrollId) : null;
+    const smooth = !prefersReducedMotion();
+    window.setTimeout(() => {
+      scrollEl?.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto', block: 'start' });
+    }, 90);
+  }
+
+  /** tab: 'home' | 'pet' | 'community' */
+  function switchView(tab) {
+    const home = document.getElementById('homeView');
+    const petView = document.getElementById('petInteractView');
+    const communityView = document.getElementById('communityView');
+    if (!home || !petView || !communityView) return;
+
+    const map = { home, pet: petView, community: communityView };
+    const activeEl = map[tab];
+    if (!activeEl) return;
+
+    state.activeTab = tab;
+
+    Object.values(map).forEach((el) => {
+      const on = el === activeEl;
+      el.classList.toggle('view-active', on);
+      el.classList.toggle('view-hidden', !on);
+    });
+
+    if (tab !== 'home') {
+      requestAnimationFrame(() => window.scrollTo(0, 0));
+    }
+    if (tab === 'pet') {
+      updateUI();
+    }
+  }
+
+  // --- 初始化全站交互 ---
+  function initAppInteractions() {
+    // 1. 主題 chips、2. 微任務、3. 社群拍拍／軟按鈕 — 皆由 bindAppClickDelegation 於 .app 上委派
+
+    bindAppClickDelegation();
+
+    const publishBtn = document.getElementById('communityPublishBtn');
+    if (publishBtn && !publishBtn.dataset.boundPublish) {
+      publishBtn.dataset.boundPublish = '1';
+      publishBtn.addEventListener('click', onCommunityPublish);
+    }
+
+    if (floatingBar && !floatingNavBound) {
+      floatingNavBound = true;
+      floatingBar.addEventListener('click', onFloatingNavClick);
+    }
+
+    bindPetDex();
+  }
+
+  // --- Onboarding 流程 ---
+  document.getElementById('startOnboarding').onclick = () => showOnboardStep(2);
+
+  document.querySelectorAll('.status-choice').forEach(btn => {
+    btn.onclick = () => {
+      const activeCount = document.querySelectorAll('.status-choice.active').length;
+      if (!btn.classList.contains('active') && activeCount >= 3) {
+        showToast('最多選擇 3 個標籤');
+        return;
+      }
+      btn.classList.toggle('active');
+    };
+  });
+
+  document.getElementById('toQuizStep').onclick = () => {
+    const input = document.getElementById('anonNameInput');
+    state.profile.name = (input && input.value.trim()) || '旅人';
+    state.profile.tags = [...document.querySelectorAll('.status-choice.active')].map(b => b.dataset.tag);
+    showOnboardStep(3);
+  };
+
+  document.querySelectorAll('.quiz-card').forEach(card => {
+    card.onclick = () => {
+      document.querySelectorAll('.quiz-card').forEach(c => c.classList.remove('active'));
+      card.classList.add('active');
+      Object.assign(state.profile, card.dataset);
+      document.getElementById('toHatchStep').disabled = false;
+    };
+  });
+
+  document.getElementById('toHatchStep').onclick = () => {
+    const eggNameDisplay = document.getElementById('eggName');
+    if(eggNameDisplay) eggNameDisplay.textContent = state.profile.egg;
+    showOnboardStep(4);
+  };
+
+  document.getElementById('hatchBtn').onclick = () => {
+    document.getElementById('eggVisual').classList.add('shake', 'glow');
+    setTimeout(() => {
+      const birthIcon = document.getElementById('birthPet');
+      const birthName = document.getElementById('birthPetName');
+      if(birthIcon) birthIcon.textContent = state.profile.icon || '✦';
+      if(birthName) birthName.textContent = state.profile.petType;
+      showOnboardStep(5);
+    }, 1200);
+  };
+
+  // --- 進入 Lumina 按鈕 ---
+  document.getElementById('enterAppBtn').onclick = () => {
+      const subtitle = document.getElementById('brandSubtitle');
+      const greeting = document.getElementById('heroGreeting');
+      const actorName = document.getElementById('actorName');
+      const tagArea = document.getElementById('heroTags');
+
+      if(subtitle) subtitle.textContent = `${state.profile.name}，今天也一起慢慢往前。`;
+      if(greeting) greeting.textContent = `${state.profile.name} 的微光旅程。`;
+      if(actorName) actorName.textContent = state.profile.petType;
+      const petInteractIcon = document.getElementById('petInteractIcon');
+      if (petInteractIcon) petInteractIcon.textContent = state.profile.icon || '✦';
+
+      if(tagArea) {
+          tagArea.innerHTML = '';
+          state.profile.tags.forEach(tag => {
+              const p = document.createElement('div'); p.className = 'pill'; p.textContent = tag;
+              tagArea.appendChild(p);
+          });
+      }
+
+      onboarding.classList.remove('active');
+      appRoot.style.filter = "none";
+      appRoot.style.pointerEvents = "auto";
+
+      initAppInteractions();
+      renderCommunityFeeds();
+      updateUI(); // 確保初始狀態解鎖正確
+      requestAnimationFrame(() => {
+        const cm = document.getElementById('communityMessageInput');
+        if (cm) adjustAutoGrowTextarea(cm);
+      });
+      showToast(`歡迎回來，${state.profile.name}`);
+  };
+
+  function showOnboardStep(step) {
+    document.querySelectorAll('.onboard-step').forEach(el => {
+      el.classList.remove('active');
+      if (Number(el.dataset.step) === step) el.classList.add('active');
+    });
+  }
+</script>
+  </body>
+</html>
